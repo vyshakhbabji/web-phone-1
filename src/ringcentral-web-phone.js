@@ -1181,26 +1181,26 @@
 
 
         //Dummy Data
-        // var xrBody = 'VQSessionReport: CallTerm\r\n' +
-        //     'CallID: ' + callids + '\r\n' +
-        //     'LocalID: ' + fromLocalID + '\r\n' +
-        //     'RemoteID: ' + fromLocalID + '\r\n' +
-        //     'OrigID: ' + fromLocalID + '\r\n' +
-        //     'LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823\r\n' +
-        //     'RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000\r\n' +
-        //     'LocalMetrics:\r\n' +
-        //     'Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z\r\n' +
-        //     'SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on\r\n' +
-        //     'JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500\r\n' +
-        //     'PacketLoss: NLR=0.0 JDR=0.0\r\n' +
-        //     'BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16\r\n' +
-        //     'Delay: RTD=0 ESD=0 SOWD=0 IAJ=0\r\n' +
-        //     'QualityEst: MOSLQ=4.5 MOSCQ=4.5\r\n' +
-        //     'DialogID: ' + callids + ';to-tag=' + (session.to_tag || '') + ';from-tag=' + (session.from_tag || '');
+        var xrBody = 'VQSessionReport: CallTerm\r\n' +
+            'CallID: ' + callids + '\r\n' +
+            'LocalID: ' + fromLocalID + '\r\n' +
+            'RemoteID: ' + fromLocalID + '\r\n' +
+            'OrigID: ' + fromLocalID + '\r\n' +
+            'LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823\r\n' +
+            'RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000\r\n' +
+            'LocalMetrics:\r\n' +
+            'Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z\r\n' +
+            'SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on\r\n' +
+            'JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500\r\n' +
+            'PacketLoss: NLR=0.0 JDR=0.0\r\n' +
+            'BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16\r\n' +
+            'Delay: RTD=0 ESD=0 SOWD=0 IAJ=0\r\n' +
+            'QualityEst: MOSLQ=4.5 MOSCQ=4.5\r\n' +
+            'DialogID: ' + callids + ';to-tag=' + (session.to_tag || '') + ';from-tag=' + (session.from_tag || '');
 
         //TODO:Add body to the Publish
 
-        // publishRequest.request.body = xrBody;
+        publishRequest.request.body = xrBody;
 
 
         // publishRequest.on('accepted', function (response, cause) {
