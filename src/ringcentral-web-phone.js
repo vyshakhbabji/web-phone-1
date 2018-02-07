@@ -28,7 +28,12 @@
 
     var uuidKey = 'rc-webPhone-uuid';
 
-    var responseTimeout = 10000;
+
+    var fromkey = '';
+
+    var responseTimeout = 60000;
+
+    var pc = '';
 
     function uuid() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -77,14 +82,19 @@
                 this._audio[url].src = url;
                 this._audio[url].loop = true;
                 this._audio[url].volume = volume;
-                this._audio[url].play();
+                this._audio[url].playPromise = this._audio[url].play();
             }
         } else {
             if (val) {
                 this._audio[url].currentTime = 0;
-                this._audio[url].play();
+                this._audio[url].playPromise = this._audio[url].play();
             } else {
-                this._audio[url].pause();
+                var audio = this._audio[url];
+                if (audio.playPromise !== undefined) {
+                    audio.playPromise.then(function() {
+                        audio.pause();
+                    });
+                }
             }
         }
 
@@ -143,10 +153,10 @@
         var id = options.uuid || localStorage.getItem(this.uuidKey) || uuid(); //TODO Make configurable
         localStorage.setItem(this.uuidKey, id);
 
-        var rcMediaHandlerFactory = function(session, options) {
-            //TODO Override MediaHandler functions in order to disable TCP candidates
-            return new SIP.WebRTC.MediaHandler(session, options);
-        };
+        // var rcMediaHandlerFactory = function(session, options) {
+        //     //TODO Override MediaHandler functions in order to disable TCP candidates
+        //     return new SIP.WebRTC.MediaHandler(session, options);
+        // };
 
         this.appKey = options.appKey;
         this.appName = options.appName;
@@ -169,8 +179,10 @@
             autostart: true,
             register: true,
             iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
-            mediaHandlerFactory: rcMediaHandlerFactory,
-            rtcpMuxPolicy: "negotiate"
+            // mediaHandlerFactory: rcMediaHandlerFactory,
+            rtcpMuxPolicy: "negotiate",
+            //disable TCP candidates
+            hackStripTcp:true
         };
 
 
@@ -199,6 +211,12 @@
             this.userAgent.audioHelper.playIncoming(true);
             patchSession(session);
             patchIncomingSession(session);
+            session._sendReceiveConfirmPromise = session.sendReceiveConfirm().then(function() {
+                session.logger.log('sendReceiveConfirm success');
+            }).catch(function(error){
+                session.logger.error('failed to send receive confirmation via SIP MESSAGE due to ' + error);
+                throw error;
+            });
         }.bind(this));
 
         this.userAgent.audioHelper = new AudioHelper(options.audioHelper);
@@ -214,7 +232,7 @@
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
-    WebPhone.version = '0.4.2';
+    WebPhone.version = '0.4.4';
     WebPhone.uuid = uuid;
     WebPhone.delay = delay;
     WebPhone.extend = extend;
@@ -321,6 +339,9 @@
         session.stopRecord = stopRecord;
         session.flip = flip;
 
+        //publish
+        session.publish =publish;
+
         session.on('replaced', patchSession);
         // session.on('connecting', onConnecting);
 
@@ -358,6 +379,13 @@
             session.mediaHandler.removeListener('iceConnectionFailed', stopPlaying);
         }
 
+
+
+        RTCPeerConnection.prototype.getPeerStats = window.getStats;
+
+        pc =  session.mediaHandler.peerConnection;
+
+
         if (session.ua.onSession) session.ua.onSession(session);
 
         return session;
@@ -370,7 +398,7 @@
         try {
             parseRcHeader(session);
         } catch (e) {
-            console.error('Can\'t parse RC headers from invite request due to ', e);
+            session.logger.error('Can\'t parse RC headers from invite request due to ' + e);
         }
         session.canUseRCMCallControl = canUseRCMCallControl;
         session.createSessionMessage = createSessionMessage;
@@ -383,22 +411,22 @@
     /*--------------------------------------------------------------------------------------------------------------------*/
 
     function parseRcHeader(session) {
-      var prc = session.request.headers['P-Rc'];
-      if (prc && prc.length) {
-        var rawInviteMsg = prc[0].raw;
-        var parser = new DOMParser();
-        var xmlDoc = parser.parseFromString(rawInviteMsg, 'text/xml');
-        var hdrNode = xmlDoc.getElementsByTagName('Hdr')[0];
+        var prc = session.request.headers['P-Rc'];
+        if (prc && prc.length) {
+            var rawInviteMsg = prc[0].raw;
+            var parser = new DOMParser();
+            var xmlDoc = parser.parseFromString(rawInviteMsg, 'text/xml');
+            var hdrNode = xmlDoc.getElementsByTagName('Hdr')[0];
 
-        if (hdrNode) {
-          session.rcHeaders = {
-            sid: hdrNode.getAttribute('SID'),
-            request: hdrNode.getAttribute('Req'),
-            from: hdrNode.getAttribute('From'),
-            to: hdrNode.getAttribute('To'),
-          };
+            if (hdrNode) {
+                session.rcHeaders = {
+                    sid: hdrNode.getAttribute('SID'),
+                    request: hdrNode.getAttribute('Req'),
+                    from: hdrNode.getAttribute('From'),
+                    to: hdrNode.getAttribute('To'),
+                };
+            }
         }
-      }
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -465,7 +493,10 @@
      * @return {Promise}
      */
     function toVoicemail() {
-        return this.sendSessionMessage(messages.toVoicemail);
+        var session = this;
+        return session._sendReceiveConfirmPromise.then(function () {
+            return session.sendSessionMessage(messages.toVoicemail);
+        });
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -485,8 +516,10 @@
             body += ' Units="'+ replyOptions.timeUnits +'"';
             body += ' Dir="'+ replyOptions.callbackDirection +'"';
         }
-
-        return this.sendSessionMessage({ reqid: messages.replyWithMessage.reqid, body: body });
+        var session = this;
+        return session._sendReceiveConfirmPromise.then(function () {
+            return session.sendSessionMessage({ reqid: messages.replyWithMessage.reqid, body: body });
+        });
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -616,6 +649,7 @@
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
+    //publish
     /**
      * @private
      * @param {SIP.Session} session
@@ -634,8 +668,10 @@
 
             if (flag) {
                 session.__hold(options);
+                publish(session,options);
             } else {
                 session.__unhold(options);
+                publish(session,options);
             }
 
         });
@@ -652,6 +688,8 @@
     function invite(number, options) {
 
         var ua = this;
+
+
 
         options = options || {};
         options.extraHeaders = (options.extraHeaders || []).concat(ua.defaultHeaders);
@@ -681,6 +719,9 @@
      */
     function receiveRequest(request) {
         var session = this;
+
+        fromkey = request.getHeader('From');
+
         switch (request.method) {
             case SIP.C.INFO:
                 session.emit('RC_SIP_INFO', request);
@@ -767,7 +808,11 @@
      * @return {Promise}
      */
     function dtmf(dtmf, duration) {
+
         var session = this;
+
+        publish(session);
+
         duration = parseInt(duration) || 1000;
         var peer = session.mediaHandler.peerConnection;
         var stream = session.getLocalStreams()[0];
@@ -785,6 +830,7 @@
      * @return {Promise}
      */
     function hold() {
+        //publish(option,this);
         return setHold(this, true);
     }
 
@@ -904,9 +950,9 @@
             .then(function() {
 
                 var referTo = '<' + target.dialog.remote_target.toString() +
-                              '?Replaces=' + target.dialog.id.call_id +
-                              '%3Bto-tag%3D' + target.dialog.id.remote_tag +
-                              '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
+                    '?Replaces=' + target.dialog.id.call_id +
+                    '%3Bto-tag%3D' + target.dialog.id.remote_tag +
+                    '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
 
                 transferOptions = transferOptions || {};
                 transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
@@ -1013,6 +1059,164 @@
     function park() {
         return sendReceive(this, messages.park);
     }
+
+    /*--------------------------------------------------------------------------------------------------------------------*/
+
+
+
+    /*--------------------------------------------------------------------------------------------------------------------*/
+
+
+    //Straightforward way of calling getStat API
+
+
+    // function myGetStats(peer, callback) {
+    //     console.log("ADDDED MYGETSTAT");
+    //     if (!!navigator.mozGetUserMedia) {
+    //         peer.getStats(
+    //             function (res) {
+    //                 var items = [];
+    //                 res.forEach(function (result) {
+    //                     items.push(result);
+    //                 });
+    //                 callback(items);
+    //             },
+    //             callback
+    //         );
+    //     } else {
+    //         peer.getStats(function (res) {
+    //             var items = [];
+    //             res.result().forEach(function (result) {
+    //                 var item = {};
+    //                 result.names().forEach(function (name) {
+    //                     item[name] = result.stat(name);
+    //                     console.log('(name)', name);
+    //                 });
+    //                 item.id = result.id;
+    //                 item.type = result.type;
+    //                 item.timestamp = result.timestamp;
+    //                 items.push(item);
+    //             });
+    //             callback(items);
+    //         });
+    //     }
+    // };
+    //
+    // function getStats(peer) {
+    //     console.log("GET STAT ADDED");
+    //     myGetStats(peer, function (results) {
+    //         for (var i = 0; i < results.length; ++i) {
+    //             var res = results[i];
+    //             console.log(res);
+    //         }
+    //     });
+    // }
+
+
+
+    function fetchStat() {
+
+        //using https://github.com/muaz-khan/getStats
+
+        var some = ''
+        var res = pc.getPeerStats(pc, function (result) {
+            result.connectionType.remote.ipAddress
+            result.connectionType.remote.candidateType
+            result.connectionType.transport
+            result.bandwidth.speed
+
+            // to access native "results" array
+            result.results.forEach(function (item) {
+                if (item.type === 'ssrc' && item.transportId === 'Channel-audio-1') {
+                    var packetsLost = item.packetsLost;
+                    var packetsSent = item.packetsSent;
+                    var audioInputLevel = item.audioInputLevel;
+                    var trackId = item.googTrackId; // media stream track id
+                    var isAudio = item.mediaType === 'audio'; // audio or video
+                    var isSending = item.id.indexOf('_send') !== -1; // sender or receiver
+
+                    console.log('lost',packetsLost);
+                    console.log('sent',packetsSent);
+
+                    console.log('SendRecv type', item.id.split('_send').pop());
+                    console.log('MediaStream track type', item.mediaType);
+                }
+            });
+
+            // TODO : Need to somehow fetch this result and send as body
+            console.log(result.results);
+        });
+
+
+    }
+
+    //PUBLISH
+
+    function publish(session,options) {
+
+        // getStats(pc);
+
+        fetchStat();
+
+        options = options || {};
+        options.extraHeaders = (options.extraHeaders || []).concat(session.ua.defaultHeaders);
+        options.media = options.media || {};
+        options.media.constraints = options.media.constraints || {audio: true, video: false};
+        options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
+        options.extraHeaders.push('Event: vq-rtcpxr');
+        options.extraHeaders.push('Content-Type: application/vq-rtcpxr');
+        options.extraHeaders.push('Contact: ' + session.contact);
+
+
+        var publishRequest = session.ua.request('PUBLISH', 'rtcpxr@rtcpxr.ringcentral.com:5060', {
+            extraHeaders: options.extraHeaders
+        });
+
+        publishRequest.request.to = 'rtcpxr@rtcpxr.ringcentral.com:5060';
+        publishRequest.request.setHeader('Expires', '60');
+
+        var callids = session.dialog.id.call_id || publishRequest.request.call_id;
+        var fromLocalID = publishRequest.request.from.friendlyName;
+
+
+
+        //Dummy Data
+        // var xrBody = 'VQSessionReport: CallTerm\r\n' +
+        //     'CallID: ' + callids + '\r\n' +
+        //     'LocalID: ' + fromLocalID + '\r\n' +
+        //     'RemoteID: ' + fromLocalID + '\r\n' +
+        //     'OrigID: ' + fromLocalID + '\r\n' +
+        //     'LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823\r\n' +
+        //     'RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000\r\n' +
+        //     'LocalMetrics:\r\n' +
+        //     'Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z\r\n' +
+        //     'SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on\r\n' +
+        //     'JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500\r\n' +
+        //     'PacketLoss: NLR=0.0 JDR=0.0\r\n' +
+        //     'BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16\r\n' +
+        //     'Delay: RTD=0 ESD=0 SOWD=0 IAJ=0\r\n' +
+        //     'QualityEst: MOSLQ=4.5 MOSCQ=4.5\r\n' +
+        //     'DialogID: ' + callids + ';to-tag=' + (session.to_tag || '') + ';from-tag=' + (session.from_tag || '');
+
+        //TODO:Add body to the Publish
+
+        // publishRequest.request.body = xrBody;
+
+
+        // publishRequest.on('accepted', function (response, cause) {
+        //     console.log("Accepted OBJECT", response);
+        // });
+        // publishRequest.on('rejected', function (response, cause) {
+        //     console.log("Rejected OBJECT", response);
+        // });
+
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                resolve(publishRequest.send());
+            }, 300);
+        });
+    }
+
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 

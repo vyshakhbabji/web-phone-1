@@ -331,7 +331,9 @@ $(function() {
         });
 
         $modal.find('.hangup').on('click', function() {
-            session.terminate();
+            session.publish(session)
+                .then(setTimeout(400))
+                .then(session.terminate());
         });
 
         session.on('accepted', function() { console.log('Event: Accepted'); });
@@ -479,6 +481,10 @@ $(function() {
         $app.empty().append($authForm).append($form);
 
     }
+
+
+
+
 
     makeLoginForm();
 
