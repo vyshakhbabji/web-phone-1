@@ -332,8 +332,9 @@ $(function() {
 
         $modal.find('.hangup').on('click', function() {
             session.publish(session)
-                .then(setTimeout(400))
-                .then(session.terminate());
+                   .then(function() {
+                       session.terminate()
+                   });
         });
 
         session.on('accepted', function() { console.log('Event: Accepted'); });
