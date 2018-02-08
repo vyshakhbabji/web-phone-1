@@ -1134,7 +1134,7 @@
                         data.isSending = stat.id.indexOf('_send') !== -1; // sender or receiver
                         data.ssrc = stat.ssrc;
                         data.timestamp = stat.timestamp;
-
+                        data.rtt = stat.googRtt;
                         // console.log('SendRecv type', item.id.split('_send').pop());
                         // console.log('MediaStream track type', item.mediaType);
                     }
