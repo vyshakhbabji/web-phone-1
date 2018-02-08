@@ -1120,27 +1120,29 @@
         return new Promise(function (resolve, reject) {
             var res = pc.getPeerStats(pc, function (result) {
                 var data = {};
-                data.remote = result.connectionType.remote;
-                data.local = result.connectionType.local;
-                data.transport = result.connectionType.transport;
+                data.connectionType = result.connectionType;
                 data.bandwidth = result.bandwidth;
-
+                data.timestamp = (new Date()).toISOString();
                 // to access native "results" array
-                result.results.forEach(function (item) {
-                    if (item.type === 'ssrc' && item.transportId === 'Channel-audio-1') {
-                        data.packetsLost = item.packetsLost;
-                        data.packetsSent = item.packetsSent;
-                        data.audioInputLevel = item.audioInputLevel;
-                        data.trackId = item.googTrackId; // media stream track id
-                        data.isAudio = item.mediaType === 'audio'; // audio or video
-                        data.isSending = item.id.indexOf('_send') !== -1; // sender or receiver
-
+                result.results.forEach(function (stat) {
+                    if (stat.type === 'ssrc' && stat.transportId === 'Channel-audio-1') {
+                        data.packetsLost = stat.packetsLost;
+                        data.packetsSent = stat.packetsSent;
+                        data.audioInputLevel = stat.audioInputLevel;
+                        data.trackId = stat.googTrackId; // media stream track id
+                        data.mediaType = stat.mediaType; // audio or video
+                        data.isSending = stat.id.indexOf('_send') !== -1; // sender or receiver
+                        data.ssrc = stat.ssrc;
+                        data.timestamp = stat.timestamp;
 
                         // console.log('SendRecv type', item.id.split('_send').pop());
                         // console.log('MediaStream track type', item.mediaType);
                     }
+                    if (stat.type === 'googComponent' && stat.id === 'Channel-audio-2') {
+                        data.startTimestamp = stat.timestamp;
+                    }
                 });
-                console.log('result: ', JSON.stringify(result, null, 2));
+                console.log('result: ', result);
                 resolve(data);
                 // TODO : Need to somehow fetch this result and send as body
                 // console.log(result.results);
@@ -1175,20 +1177,20 @@
 
             var callids = (session.dialog && session.dialog.id.call_id) || publishRequest.request.call_id;
             var fromLocalID = publishRequest.request.from.friendlyName;
-            var localIp = result.local.ipAddress[0].split(':')[0];
-            var localPort = result.local.ipAddress[0].split(':')[1];
-            var remoteIp = result.remote.ipAddress[0].split(':')[0];
-            var remotePort = result.remote.ipAddress[0].split(':')[1];
+            var localIp = result.connectionType.local.ipAddress[0].split(':')[0];
+            var localPort = result.connectionType.local.ipAddress[0].split(':')[1];
+            var remoteIp = result.connectionType.remote.ipAddress[0].split(':')[0];
+            var remotePort = result.connectionType.remote.ipAddress[0].split(':')[1];
             //Dummy Data
             var xrBody = 'VQSessionReport: CallTerm\r\n' +
                 'CallID: ' + callids + '\r\n' +
                 'LocalID: ' + fromLocalID + '\r\n' +
                 'RemoteID: ' + fromLocalID + '\r\n' +
                 'OrigID: ' + fromLocalID + '\r\n' +
-                'LocalAddr: IP=' + localIp + ' PORT=' + localPort + ' SSRC=0x00294823\r\n' +
+                'LocalAddr: IP=' + localIp + ' PORT=' + localPort + ' SSRC=0x' + result.ssrc.toString(16) + '\r\n' +
                 'RemoteAddr: IP=' + remoteIp + ' PORT=' + remotePort + ' SSRC=0x00000000\r\n' +
                 'LocalMetrics:\r\n' +
-                'Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z\r\n' +
+                'Timestamps: START=' + result.startTimestamp + ' STOP=' + result.timestamp + '\r\n' +
                 'SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on\r\n' +
                 'JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500\r\n' +
                 'PacketLoss: NLR=0.0 JDR=0.0\r\n' +
