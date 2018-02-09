@@ -601,7 +601,7 @@
     /*--------------------------------------------------------------------------------------------------------------------*/
 
     function sendRequest(type, config) {
-        if (type == SIP.C.PRACK) {
+        if (type == SIP.C.ACK) {
             // type = SIP.C.ACK;
             return this;
         }
@@ -706,7 +706,7 @@
                 if (session.status === SIP.Session.C.STATUS_CONFIRMED || session.status === SIP.Session.C.STATUS_WAITING_FOR_ACK) {
                     var contentType = request.getHeader('content-type');
                     if (contentType.match(/^application\/json/i)) {
-                        request.reply(200);
+                        request.reply(200,null, ['Contact: ' + session.contact]);
                         return session;
                     }
                 }
@@ -718,11 +718,15 @@
                         //TODO: check that SDP did not change
                         session.logger.log('re-INVITE received');
                         var localSDP = session.mediaHandler.peerConnection.localDescription.sdp;
+
                         request.reply(200, null, ['Contact: ' + session.contact], localSDP, function() {
+
                             session.status = SIP.Session.C.STATUS_WAITING_FOR_ACK;
                             session.setInvite2xxTimer(request, localSDP);
                             session.setACKTimer();
+
                         });
+
                         return session;
                     }
                     //else will be rejected with 488 by SIP.js
@@ -855,11 +859,15 @@
                 throw new TypeError('Invalid target: ' + originalTarget);
             }
 
+
             extraHeaders = extraHeaders.concat(session.ua.defaultHeaders).concat([
+
                 'Contact: ' + session.contact,
+
                 'Allow: ' + SIP.UA.C.ALLOWED_METHODS.toString(),
                 'Refer-To: ' + target
             ]);
+
 
             // Send the request
             session.sendRequest(SIP.C.REFER, {
