@@ -173,11 +173,37 @@
             domain: this.sipInfo.domain,
             autostart: true,
             register: true,
-            iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
+            // iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
             // mediaHandlerFactory: rcMediaHandlerFactory,
-            rtcpMuxPolicy: "negotiate",
+            // rtcpMuxPolicy: "negotiate",
             //disable TCP candidates
-            hackStripTcp:true
+            // hackStripTcp:true,
+            //new params added
+            //changes to media handler (0.7.8 - > 0.8.4)
+
+            // iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
+            // // mediaHandlerFactory: rcMediaHandlerFactory,
+            // rtcpMuxPolicy: "negotiate",
+            // //disable TCP candidates
+
+            // wsServerMaxReconnection: options.wsServerMaxReconnection || 5,
+            // connectionRecoveryMaxInterval: options.connectionRecoveryMaxInterval || 60,
+            // connectionRecoveryMinInterval: options.connectionRecoveryMinInterval || 60,
+
+
+            sessionDescriptionHandlerFactoryOptions: {
+                peerConnectionOptions: {
+                    iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
+                    rtcConfiguration: {
+                        rtcpMuxPolicy: 'negotiate'
+                    },
+                },
+                constraints: {
+                    audio: true,
+                    video: false
+                },
+                modifiers: options.modifiers
+            }
         };
 
 
@@ -337,11 +363,14 @@
         session.on('replaced', patchSession);
         // session.on('connecting', onConnecting);
 
+        session.mute = mute;
+        session.unmute = unmute;
+
         // Audio
         session.on('progress', function(incomingResponse) {
             if (incomingResponse.status_code === 183 && incomingResponse.body) {
                 session.createDialog(incomingResponse, 'UAC');
-                session.mediaHandler.setDescription(incomingResponse).then(function() {
+                session.sessionDescriptionHandler.setDescription(incomingResponse.body).then(function() {
                     session.status = 11; //C.STATUS_EARLY_MEDIA;
                     session.hasAnswer = true;
                 });
@@ -354,8 +383,8 @@
         session.on('cancel', stopPlaying);
         session.on('failed', stopPlaying);
         session.on('replaced', stopPlaying);
-        session.mediaHandler.on('iceConnectionCompleted', stopPlaying);
-        session.mediaHandler.on('iceConnectionFailed', stopPlaying);
+        // session.sessionDescriptionHandler.on('iceConnectionCompleted', stopPlaying);
+        // session.mediaHandler.on('iceConnectionFailed', stopPlaying);
 
         function stopPlaying() {
             session.ua.audioHelper.playOutgoing(false);
@@ -367,8 +396,8 @@
             session.removeListener('cancel', stopPlaying);
             session.removeListener('failed', stopPlaying);
             session.removeListener('replaced', stopPlaying);
-            session.mediaHandler.removeListener('iceConnectionCompleted', stopPlaying);
-            session.mediaHandler.removeListener('iceConnectionFailed', stopPlaying);
+            // session.sessionDescriptionHandler.removeListener('iceConnectionCompleted', stopPlaying);
+            // session.mediaHandler.removeListener('iceConnectionFailed', stopPlaying);
         }
 
         if (session.ua.onSession) session.ua.onSession(session);
@@ -396,22 +425,22 @@
     /*--------------------------------------------------------------------------------------------------------------------*/
 
     function parseRcHeader(session) {
-      var prc = session.request.headers['P-Rc'];
-      if (prc && prc.length) {
-        var rawInviteMsg = prc[0].raw;
-        var parser = new DOMParser();
-        var xmlDoc = parser.parseFromString(rawInviteMsg, 'text/xml');
-        var hdrNode = xmlDoc.getElementsByTagName('Hdr')[0];
+        var prc = session.request.headers['P-Rc'];
+        if (prc && prc.length) {
+            var rawInviteMsg = prc[0].raw;
+            var parser = new DOMParser();
+            var xmlDoc = parser.parseFromString(rawInviteMsg, 'text/xml');
+            var hdrNode = xmlDoc.getElementsByTagName('Hdr')[0];
 
-        if (hdrNode) {
-          session.rcHeaders = {
-            sid: hdrNode.getAttribute('SID'),
-            request: hdrNode.getAttribute('Req'),
-            from: hdrNode.getAttribute('From'),
-            to: hdrNode.getAttribute('To'),
-          };
+            if (hdrNode) {
+                session.rcHeaders = {
+                    sid: hdrNode.getAttribute('SID'),
+                    request: hdrNode.getAttribute('Req'),
+                    from: hdrNode.getAttribute('From'),
+                    to: hdrNode.getAttribute('To'),
+                };
+            }
         }
-      }
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -787,10 +816,13 @@
     function dtmf(dtmf, duration) {
         var session = this;
         duration = parseInt(duration) || 1000;
-        var peer = session.mediaHandler.peerConnection;
-        var stream = session.getLocalStreams()[0];
-        var dtmfSender = peer.createDTMFSender(stream.getAudioTracks()[0]);
-        if (dtmfSender !== undefined && dtmfSender.canInsertDTMF) {
+        var pc = session.sessionDescriptionHandler.peerConnection;
+        var senders = pc.getSenders();
+        var audioSender = senders.find(function(sender) {
+            return sender.track && sender.track.kind === 'audio';
+        });
+        dtmfSender = audioSender.dtmf;
+        if (dtmfSender !== undefined && dtmfSender) {
             return dtmfSender.insertDTMF(dtmf, duration);
         }
         throw new Error('Send DTMF failed: ' + (!dtmfSender ? 'no sender' : (!dtmfSender.canInsertDTMF ? 'can\'t insert DTMF' : 'Unknown')));
@@ -922,9 +954,9 @@
             .then(function() {
 
                 var referTo = '<' + target.dialog.remote_target.toString() +
-                              '?Replaces=' + target.dialog.id.call_id +
-                              '%3Bto-tag%3D' + target.dialog.id.remote_tag +
-                              '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
+                    '?Replaces=' + target.dialog.id.call_id +
+                    '%3Bto-tag%3D' + target.dialog.id.remote_tag +
+                    '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
 
                 transferOptions = transferOptions || {};
                 transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
@@ -1033,6 +1065,40 @@
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
+
+    function toggleMute (session , mute) {
+        var pc = session.sessionDescriptionHandler.peerConnection;
+        if (pc.getSenders) {
+            pc.getSenders().forEach(function(sender) {
+                if (sender.track) {
+                    sender.track.enabled = !mute;
+                }
+            });
+        }
+    };
+
+
+    function mute (){
+        if (this.state !== this.STATUS_CONNECTED) {
+            this.logger.warn('An acitve call is required to mute audio');
+            return;
+        }
+        this.logger.log('Muting Audio');
+        toggleMute(this, true);
+        this.emit('muted',this.session);
+    };
+
+    function unmute() {
+        if (this.state !== this.STATUS_CONNECTED) {
+            this.logger.warn('An active call is required to unmute audio');
+            return;
+        }
+        this.logger.log('Unmuting Audio');
+        toggleMute(this,false);
+        this.emit('unmuted',this.session);
+    };
+
+
 
     return WebPhone;
 
