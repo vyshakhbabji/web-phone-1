@@ -186,9 +186,9 @@
             // rtcpMuxPolicy: "negotiate",
             // //disable TCP candidates
 
-            // wsServerMaxReconnection: options.wsServerMaxReconnection || 5,
-            // connectionRecoveryMaxInterval: options.connectionRecoveryMaxInterval || 60,
-            // connectionRecoveryMinInterval: options.connectionRecoveryMinInterval || 60,
+            wsServerMaxReconnection: options.wsServerMaxReconnection || 3,
+            connectionRecoveryMaxInterval: options.connectionRecoveryMaxInterval || 60,
+            connectionRecoveryMinInterval: options.connectionRecoveryMinInterval || 2,
 
 
             sessionDescriptionHandlerFactoryOptions: {
