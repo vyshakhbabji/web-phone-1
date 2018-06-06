@@ -168,7 +168,9 @@
             stunServers: this.sipInfo.stunServers || ['stun:74.125.194.127:19302'], //FIXME Hardcoded?
             turnServers: [],
             log: {
-                level: options.logLevel || 1 //FIXME LOG LEVEL 3
+                level: options.logLevel || 1 ,//FIXME LOG LEVEL 3
+                builtin : options.builtin || true,
+                connector  : options.connector|| null
             },
             domain: this.sipInfo.domain,
             autostart: true,
