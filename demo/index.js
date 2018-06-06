@@ -219,25 +219,29 @@ $(function() {
     }
 
     function addTrack(session){
-        var remoteVideo = document.getElementById('remoteVideo');
-        var localVideo = document.getElementById('localVideo');
 
+        session.on('trackAdded',function () {
+            var pc = session.sessionDescriptionHandler.peerConnection;
 
-        var pc = session.sessionDescriptionHandler.peerConnection;
-        // Gets remote tracks
-        var remoteStream = new MediaStream();
-        pc.getReceivers().forEach(function(receiver) {
-            remoteStream.addTrack(receiver.track);
+            // Gets remote tracks
+            var remoteVideo = document.getElementById('remoteVideo');
+            var remoteStream = new MediaStream();
+            pc.getReceivers().forEach(function(receiver) {
+                remoteStream.addTrack(receiver.track);
+            });
+            remoteVideo.srcObject = remoteStream;
+            remoteVideo.play();
+
+            // Gets local tracks
+            var localVideo = document.getElementById('localVideo');
+            var localStream = new MediaStream();
+            pc.getSenders().forEach(function(sender) {
+                localStream.addTrack(sender.track);
+            });
+            localVideo.srcObject = localStream;
+            localVideo.play();
+
         });
-        remoteVideo.srcObject = remoteStream;
-        remoteVideo.play();
-        // Gets local tracks
-        var localStream = new MediaStream();
-        pc.getSenders().forEach(function(sender) {
-            localStream.addTrack(sender.track);
-        });
-        localVideo.srcObject = localStream;
-        localVideo.play();
     }
 
 
@@ -431,11 +435,7 @@ $(function() {
             fromNumber: username,
             homeCountryId: homeCountryId
         });
-
-        session.sessionDescriptionHandler.on('addTrack', function () {
-            onAccepted(session);
-        });
-
+        onAccepted(session);
     }
 
     function makeCallForm() {
