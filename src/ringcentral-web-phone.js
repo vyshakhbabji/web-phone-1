@@ -347,6 +347,7 @@
         session.__hold = session.hold;
         session.__unhold = session.unhold;
         session.__dtmf = session.dtmf;
+        session.__reinvite=session.reinvite;
 
         session.sendRequest = sendRequest;
         session.receiveRequest = receiveRequest;
@@ -354,6 +355,7 @@
         session.hold = hold;
         session.unhold = unhold;
         session.dtmf = dtmf;
+        session.reinvite=reinvite;
 
         session.warmTransfer = warmTransfer;
         session.blindTransfer = blindTransfer;
@@ -642,6 +644,13 @@
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
+
+    function reinvite (options, modifier){
+        var session = this;
+        return session.reinvite(options,modifier);
+    }
+
+
 
     /**
      * @private
