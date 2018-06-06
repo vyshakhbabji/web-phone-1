@@ -204,8 +204,10 @@
                     audio: true,
                     video: false
                 },
-                modifiers: options.modifiers
-            }
+                modifiers: options.modifiers ,
+                modifiers: [SIP.WebRTC.Modifiers.stripTcpCandidates]
+            },
+            // sessionDescriptionHandlerFactoryOptions.modifiers : [SIP.WebRTC.Modifiers.stripTcpCandidates]
         };
 
 
