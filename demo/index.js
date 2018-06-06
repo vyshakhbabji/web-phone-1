@@ -328,24 +328,43 @@ $(function() {
         $modal.find('.transfer-form button.warm').on('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            session.hold().then(function() {
 
-                var newSession = session.ua.invite($transfer.val().trim(), {
-                    media: {
-                        render: {
-                            remote: document.getElementById('remoteVideo'),
-                            local: document.getElementById('localVideo')
+            var holded_session =  session;
+            session.hold();
+
+
+            var newSession = session.ua.invite($transfer.val().trim(), {
+                        media: {
+                            render: {
+                                remote: document.getElementById('remoteVideo'),
+                                local: document.getElementById('localVideo')
+                            }
                         }
-                    }
-                });
+                    });
 
-                newSession.once('accepted', function() {
-                    session.warmTransfer(newSession)
-                        .then(function() { console.log('Transferred'); })
-                        .catch(function(e) { console.error('Transfer failed', e.stack || e); });
-                });
+            newSession.once('accepted', session.refer(holded_session)).then(session.unhold());
 
-            });
+
+
+
+            // session.hold().then(function() {
+            //
+            //     var newSession = session.ua.invite($transfer.val().trim(), {
+            //         media: {
+            //             render: {
+            //                 remote: document.getElementById('remoteVideo'),
+            //                 local: document.getElementById('localVideo')
+            //             }
+            //         }
+            //     });
+            //
+            //     newSession.once('accepted', function() {
+            //         session.warmTransfer(newSession)
+            //             .then(function() { console.log('Transferred'); })
+            //             .catch(function(e) { console.error('Transfer failed', e.stack || e); });
+            //     });
+            //
+            // });
 
         });
 

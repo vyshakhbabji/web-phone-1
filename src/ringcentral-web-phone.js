@@ -858,83 +858,6 @@
      */
     function blindTransfer(target, options) {
 
-        options = options || {};
-
-        var session = this;
-        var extraHeaders = options.extraHeaders || [];
-        var originalTarget = target;
-
-        return new Promise(function(resolve, reject) {
-            //Blind Transfer is taken from SIP.js source
-
-            // Check Session Status
-            if (session.status !== SIP.Session.C.STATUS_CONFIRMED) {
-                throw new SIP.Exceptions.InvalidStateError(session.status);
-            }
-
-            // normalizeTarget allows instances of SIP.URI to pass through unaltered,
-            // so try to make one ahead of time
-            try {
-                target = SIP.Grammar.parse(target, 'Refer_To').uri || target;
-            } catch (e) {
-                session.logger.debug(".refer() cannot parse Refer_To from", target);
-                session.logger.debug("...falling through to normalizeTarget()");
-            }
-
-            // Check target validity
-            target = session.ua.normalizeTarget(target);
-            if (!target) {
-                throw new TypeError('Invalid target: ' + originalTarget);
-            }
-
-            extraHeaders = extraHeaders.concat(session.ua.defaultHeaders).concat([
-                'Contact: ' + session.contact,
-                'Allow: ' + SIP.UA.C.ALLOWED_METHODS.toString(),
-                'Refer-To: ' + target
-            ]);
-
-            // Send the request
-            session.sendRequest(SIP.C.REFER, {
-                extraHeaders: extraHeaders,
-                body: options.body,
-                receiveResponse: function(response) {
-                    var timeout = null;
-                    if (response.status_code === 202) {
-                        var callId = response.call_id;
-
-                        var onNotify = function(request) {
-                            if (request.call_id === callId) {
-                                var body = request && request.body || '';
-                                switch (true) {
-                                    case /1[0-9]{2}/.test(body):
-                                        request.reply(200);
-                                        break;
-                                    case /2[0-9]{2}/.test(body):
-                                        session.terminate();
-                                        clearTimeout(timeout);
-                                        session.removeListener('RC_SIP_NOTIFY', onNotify);
-                                        resolve();
-                                        break;
-                                    default:
-                                        reject(body);
-                                        break;
-                                }
-                            }
-                        };
-
-                        timeout = setTimeout(function() {
-                            reject(new Error('Timeout: no reply'));
-                            session.removeListener('RC_SIP_NOTIFY', onNotify);
-                        }, responseTimeout);
-                        session.on('RC_SIP_NOTIFY', onNotify);
-                    }
-                    else {
-                        reject(new Error('The response status code is: ' + response.status_code + ' (waiting for 202)'));
-                    }
-                }
-            });
-
-        });
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -946,27 +869,6 @@
      * @return {Promise}
      */
     function warmTransfer(target, transferOptions) {
-
-        var session = this;
-
-        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
-            .then(function() { return delay(300); })
-            .then(function() {
-
-                var referTo = '<' + target.dialog.remote_target.toString() +
-                    '?Replaces=' + target.dialog.id.call_id +
-                    '%3Bto-tag%3D' + target.dialog.id.remote_tag +
-                    '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
-
-                transferOptions = transferOptions || {};
-                transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
-                    .concat(session.ua.defaultHeaders)
-                    .concat(['Referred-By: ' + session.dialog.remote_target.toString()]);
-
-                //TODO return session.refer(newSession);
-                return session.blindTransfer(referTo, transferOptions);
-
-            });
 
     }
 
@@ -981,12 +883,10 @@
     function transfer(target, options) {
 
         var session = this;
-
-        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
-            .then(function() { return delay(300); })
-            .then(function() {
-                return session.blindTransfer(target, options);
-            });
+        if(session.local_hold)
+            session.hold();
+        delay(300);
+        return session.refer(target, options);
 
     }
 
