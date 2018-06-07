@@ -896,7 +896,7 @@
     function transfer(target, options) {
 
         var session = this;
-        if(session.local_hold)
+        if(!session.local_hold)
             session.hold();
         delay(300);
         return session.refer(target, options);
