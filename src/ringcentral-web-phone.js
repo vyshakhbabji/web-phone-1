@@ -647,7 +647,18 @@
 
     function reinvite (options, modifier){
         var session = this;
-        return session.reinvite(options,modifier);
+
+        return session.reinvite({
+            sessionDescriptionHandlerOptions: {
+                constraints: {
+                    audio: true,
+                    video: true
+                }
+            }
+        },modifier);
+
+
+        //return session.reinvite(options,modifier);
     }
 
 
@@ -684,20 +695,17 @@
      */
     function setHold(session, flag) {
         return new Promise(function(resolve, reject) {
-
             var options = {
                 eventHandlers: {
                     succeeded: resolve,
                     failed: reject
                 }
             };
-
             if (flag) {
                 session.__hold(options);
             } else {
                 session.__unhold(options);
             }
-
         });
     }
 
@@ -871,6 +879,16 @@
      */
     function blindTransfer(target, options) {
 
+        options = options || {};
+
+        var session = this;
+        var extraHeaders = options.extraHeaders || [];
+        var originalTarget = target;
+
+        return new Promise(function(resolve, reject) {
+            //Blind Transfer is taken from SIP.js source
+            return session.refer(target, options);
+        });
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -882,6 +900,26 @@
      * @return {Promise}
      */
     function warmTransfer(target, transferOptions) {
+        var session = this;
+
+        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
+            .then(function() { return delay(300); })
+            .then(function() {
+
+                var referTo = '<' + target.dialog.remote_target.toString() +
+                    '?Replaces=' + target.dialog.id.call_id +
+                    '%3Bto-tag%3D' + target.dialog.id.remote_tag +
+                    '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
+
+                transferOptions = transferOptions || {};
+                transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
+                    .concat(session.ua.defaultHeaders)
+                    .concat(['Referred-By: ' + session.dialog.remote_target.toString()]);
+
+                //TODO return session.refer(newSession);
+                return session.blindTransfer(referTo, transferOptions);
+
+            });
 
     }
 
@@ -894,13 +932,12 @@
      * @return {Promise}
      */
     function transfer(target, options) {
-
         var session = this;
-        if(!session.local_hold)
-            session.hold();
-        delay(300);
-        return session.refer(target, options);
-
+        return (session.local_hold ? Promise.resolve(null) : session.hold())
+            .then(function() { return delay(300); })
+            .then(function() {
+                return session.blindTransfer(target, options);
+            });
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/

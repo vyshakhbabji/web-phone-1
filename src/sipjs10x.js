@@ -6309,6 +6309,9 @@
                         // Attended Transfer
                         // All of these fields should be defined based on the check above
                         this.target = '"' + target.remoteIdentity.friendlyName + '" ' + '<' + target.dialog.remote_target.toString() + '?Replaces=' + target.dialog.id.call_id + '%3Bto-tag%3D' + target.dialog.id.remote_tag + '%3Bfrom-tag%3D' + target.dialog.id.local_tag + '>';
+
+                        console.error("WARM TRANSFER SUCCESS!!!");
+
                     } else {
                         // Blind Transfer
                         // Refer-To: <sip:bob@example.com>
@@ -6328,11 +6331,13 @@
 
                     if (this.ua) {
                         this.extraHeaders.push('Referred-By: <' + this.ua.configuration.uri + '>');
+                        console.error("WARM TRANSFER SUCCESS!!!");
                     }
                     // TODO: Check that this is correct isc/icc
                     this.extraHeaders.push('Contact: ' + applicant.contact);
                     this.extraHeaders.push('Allow: ' + SIP.UA.C.ALLOWED_METHODS.toString());
                     this.extraHeaders.push('Refer-To: ' + this.target);
+                    console.error("WARM TRANSFER SUCCESS!!!");
                 };
 
                 ReferClientContext.prototype = {

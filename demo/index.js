@@ -246,13 +246,7 @@ $(function() {
 
 
     function onAccepted(session) {
-
-        console.error("HOLD CALLED");
-
-        console.error("UNHOLD CALLED");
-
         addTrack(session);
-
         console.log('EVENT: Accepted', session.request);
         console.log('To', session.request.to.displayName, session.request.to.friendlyName);
         console.log('From', session.request.from.displayName, session.request.from.friendlyName);
@@ -329,44 +323,26 @@ $(function() {
             e.preventDefault();
             e.stopPropagation();
 
-            var holded_session =  session;
             session.hold();
 
-
-            var newSession = session.ua.invite($transfer.val().trim(), {
-                        media: {
-                            render: {
-                                remote: document.getElementById('remoteVideo'),
-                                local: document.getElementById('localVideo')
-                            }
+                var newSession = session.ua.invite($transfer.val().trim(), {
+                    media: {
+                        render: {
+                            remote: document.getElementById('remoteVideo'),
+                            local: document.getElementById('localVideo')
                         }
-                    });
+                    }
+                });
+                newSession.once('accepted', function() {
+                    session.warmTransfer(newSession)
+                        .then(function() { console.log('Transferred'); })
+                        .catch(function(e) { console.error('Transfer failed', e.stack || e); });
+                });
 
-            newSession.once('accepted', session.refer(holded_session)).then(session.unhold());
+            });
 
 
 
-
-            // session.hold().then(function() {
-            //
-            //     var newSession = session.ua.invite($transfer.val().trim(), {
-            //         media: {
-            //             render: {
-            //                 remote: document.getElementById('remoteVideo'),
-            //                 local: document.getElementById('localVideo')
-            //             }
-            //         }
-            //     });
-            //
-            //     newSession.once('accepted', function() {
-            //         session.warmTransfer(newSession)
-            //             .then(function() { console.log('Transferred'); })
-            //             .catch(function(e) { console.error('Transfer failed', e.stack || e); });
-            //     });
-            //
-            // });
-
-        });
 
         $modal.find('.flip-form').on('submit', function(e) {
             e.preventDefault();
