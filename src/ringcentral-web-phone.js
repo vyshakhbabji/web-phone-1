@@ -702,9 +702,9 @@
                 }
             };
             if (flag) {
-                session.__hold(options);
+                resolve(session.__hold(options));
             } else {
-                session.__unhold(options);
+                resolve(session.__unhold(options));
             }
         });
     }
@@ -902,7 +902,7 @@
     function warmTransfer(target, transferOptions) {
         var session = this;
 
-        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
+        return (session.local_hold ? Promise.resolve(null) : session.hold())
             .then(function() { return delay(300); })
             .then(function() {
 
@@ -915,10 +915,7 @@
                 transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
                     .concat(session.ua.defaultHeaders)
                     .concat(['Referred-By: ' + session.dialog.remote_target.toString()]);
-
-                //TODO return session.refer(newSession);
                 return session.blindTransfer(referTo, transferOptions);
-
             });
 
     }

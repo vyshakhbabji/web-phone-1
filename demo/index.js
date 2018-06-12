@@ -323,7 +323,7 @@ $(function() {
             e.preventDefault();
             e.stopPropagation();
 
-            session.hold();
+            session.hold().then(function() {
 
                 var newSession = session.ua.invite($transfer.val().trim(), {
                     media: {
@@ -333,6 +333,7 @@ $(function() {
                         }
                     }
                 });
+
                 newSession.once('accepted', function() {
                     session.warmTransfer(newSession)
                         .then(function() { console.log('Transferred'); })
@@ -340,6 +341,8 @@ $(function() {
                 });
 
             });
+
+        });
 
 
 
