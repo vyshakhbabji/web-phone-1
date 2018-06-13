@@ -157,6 +157,9 @@
         this.appName = options.appName;
         this.appVersion = options.appVersion;
 
+        var modifiers = options.modifiers || [];
+        modifiers.push(SIP.WebRTC.Modifiers.stripTcpCandidates)
+
         var configuration = {
             uri: 'sip:' + this.sipInfo.username + '@' + this.sipInfo.domain,
             wsServers: this.sipInfo.outboundProxy && this.sipInfo.transport
@@ -169,7 +172,7 @@
             turnServers: [],
             log: {
                 level: options.logLevel || 1 ,//FIXME LOG LEVEL 3
-                builtin : options.builtin || true,
+                builtinEnabled : options.builtinEnabled || true,
                 connector  : options.connector|| null
             },
             domain: this.sipInfo.domain,
@@ -204,8 +207,7 @@
                     audio: true,
                     video: false
                 },
-                modifiers: options.modifiers ,
-                modifiers: [SIP.WebRTC.Modifiers.stripTcpCandidates]
+                modifiers: modifiers,
             },
             // sessionDescriptionHandlerFactoryOptions.modifiers : [SIP.WebRTC.Modifiers.stripTcpCandidates]
         };
@@ -366,11 +368,11 @@
         session.stopRecord = stopRecord;
         session.flip = flip;
 
-        session.on('replaced', patchSession);
-        // session.on('connecting', onConnecting);
-
         session.mute = mute;
         session.unmute = unmute;
+        session.onHold = onHold;
+
+        session.on('replaced', patchSession);
 
         // Audio
         session.on('progress', function(incomingResponse) {
@@ -390,7 +392,7 @@
         session.on('failed', stopPlaying);
         session.on('replaced', stopPlaying);
         // session.sessionDescriptionHandler.on('iceConnectionCompleted', stopPlaying);
-        // session.mediaHandler.on('iceConnectionFailed', stopPlaying);
+        // session.sessionDescriptionHandler.on('iceConnectionFailed', stopPlaying);
 
         function stopPlaying() {
             session.ua.audioHelper.playOutgoing(false);
@@ -403,7 +405,7 @@
             session.removeListener('failed', stopPlaying);
             session.removeListener('replaced', stopPlaying);
             // session.sessionDescriptionHandler.removeListener('iceConnectionCompleted', stopPlaying);
-            // session.mediaHandler.removeListener('iceConnectionFailed', stopPlaying);
+            // session.sessionDescriptionHandler.removeListener('iceConnectionFailed', stopPlaying);
         }
 
         if (session.ua.onSession) session.ua.onSession(session);
@@ -647,8 +649,7 @@
 
     function reinvite (options, modifier){
         var session = this;
-
-        return session.reinvite({
+        return session.__reinvite({
             sessionDescriptionHandlerOptions: {
                 constraints: {
                     audio: true,
@@ -656,9 +657,6 @@
                 }
             }
         },modifier);
-
-
-        //return session.reinvite(options,modifier);
     }
 
 
@@ -842,7 +840,7 @@
         var audioSender = senders.find(function(sender) {
             return sender.track && sender.track.kind === 'audio';
         });
-        dtmfSender = audioSender.dtmf;
+        var dtmfSender = audioSender.dtmf;
         if (dtmfSender !== undefined && dtmfSender) {
             return dtmfSender.insertDTMF(dtmf, duration);
         }
@@ -1035,6 +1033,11 @@
         this.emit('muted',this.session);
     };
 
+    function onHold (){
+        var session = this;
+        return session.local_hold;
+    };
+
     function unmute() {
         if (this.state !== this.STATUS_CONNECTED) {
             this.logger.warn('An active call is required to unmute audio');
@@ -1044,8 +1047,6 @@
         toggleMute(this,false);
         this.emit('unmuted',this.session);
     };
-
-
 
     return WebPhone;
 

@@ -401,6 +401,8 @@ $(function() {
             close();
         });
 
+        // var ee = new SIP.EventEmitter();
+
         session.sessionDescriptionHandler.on('iceConnection', function() { console.log('Event: ICE: iceConnection'); });
         session.sessionDescriptionHandler.on('iceConnectionChecking', function() { console.log('Event: ICE: iceConnectionChecking'); });
         session.sessionDescriptionHandler.on('iceConnectionConnected', function() { console.log('Event: ICE: iceConnectionConnected'); });
