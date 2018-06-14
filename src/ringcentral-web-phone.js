@@ -649,14 +649,10 @@
 
     function reinvite (options, modifier){
         var session = this;
-        return session.__reinvite({
-            sessionDescriptionHandlerOptions: {
-                constraints: {
-                    audio: true,
-                    video: true
-                }
-            }
-        },modifier);
+        options = options || {}
+        options.sessionDescriptionHandlerOptions = options.sessionDescriptionHandlerOptions || {};
+        options.sessionDescriptionHandlerOptions.constraints = options.sessionDescriptionHandlerOptions.constraints || {audio: true, video: false};
+        return session.__reinvite(options, modifier);
     }
 
 
