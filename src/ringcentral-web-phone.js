@@ -1023,14 +1023,16 @@
     };
 
 
-    function mute (){
+    function mute (silent){
         if (this.state !== this.STATUS_CONNECTED) {
             this.logger.warn('An acitve call is required to mute audio');
             return;
         }
         this.logger.log('Muting Audio');
         toggleMute(this, true);
-        this.emit('muted',this.session);
+        if (!silent) {
+            this.emit('muted',this.session);
+        }    
     };
 
     function onHold (){
@@ -1038,14 +1040,17 @@
         return session.local_hold;
     };
 
-    function unmute() {
+    function unmute(silent) {
         if (this.state !== this.STATUS_CONNECTED) {
             this.logger.warn('An active call is required to unmute audio');
             return;
         }
         this.logger.log('Unmuting Audio');
         toggleMute(this,false);
-        this.emit('unmuted',this.session);
+        
+        if (!silent) {
+            this.emit('unmuted',this.session);
+        }    
     };
 
     return WebPhone;
