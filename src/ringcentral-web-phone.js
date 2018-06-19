@@ -874,14 +874,9 @@
     function blindTransfer(target, options) {
 
         options = options || {};
-
-        var session = this;
-        var extraHeaders = options.extraHeaders || [];
-        var originalTarget = target;
-
-        return new Promise(function(resolve, reject) {
-            //Blind Transfer is taken from SIP.js source
-            return session.refer(target, options);
+        
+        //Blind Transfer is taken from SIP.js source
+        return this.refer(target, options);
         });
     }
 
