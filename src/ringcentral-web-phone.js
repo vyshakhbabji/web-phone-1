@@ -228,12 +228,12 @@
 
         this.userAgent.media = {};
 
-        if (options.media !== undefined && options.media.remote && options.media.local) {
-            this.userAgent.media.remote = options.media.remote ;
-            this.userAgent.media.local = options.media.local;
+        if (options.media && (options.media.remote && options.media.local)){
+                this.userAgent.media.remote = options.media.remote ;
+                this.userAgent.media.local = options.media.local;
         }
         else
-            throw new Error('HTML Media Element not Defined');
+            this.userAgent.media = null;
 
         this.userAgent.sipInfo = this.sipInfo;
 
@@ -266,7 +266,6 @@
         this.userAgent.transport._onMessage = this.userAgent.transport.onMessage;
         this.userAgent.transport.onMessage = onMessage;
         this.userAgent.register();
-
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -386,7 +385,6 @@
         session.mute = mute;
         session.unmute = unmute;
         session.onLocalHold = onLocalHold;
-
         session.media = session.ua.media;
         session.addTrack = addTrack;
 
@@ -404,7 +402,9 @@
             }
         });
 
-        session.on('trackAdded',addTrack);
+        if(session.media)
+            session.on('trackAdded',addTrack);
+
 
         session.on('accepted', stopPlaying);
         session.on('rejected', stopPlaying);
@@ -1070,15 +1070,27 @@
     /*--------------------------------------------------------------------------------------------------------------------*/
 
 
-    function addTrack(){
+    function addTrack(remoteAudioEle, localAudioEle){
 
         var session = this;
         var pc = session.sessionDescriptionHandler.peerConnection;
 
-        // Gets remote tracks
-        var remoteAudio = session.media.remote;
-        var remoteStream = new MediaStream();
+        var remoteAudio;
+        var localAudio;
 
+        if(remoteAudioEle&&localAudioEle){
+            remoteAudio = remoteAudioEle;
+            localAudio = localAudioEle;
+        }
+        else if(session.media){
+            remoteAudio = session.media.remote;
+            localAudio = session.media.local;
+        }
+        else
+            throw new Error('HTML Media Element not Defined');
+
+
+        var remoteStream = new MediaStream();
         if(pc.getReceivers){
             pc.getReceivers().forEach(function(receiver) {
                 var rtrack = receiver.track;
@@ -1094,10 +1106,7 @@
             session.logger.log('local play was rejected');
         });
 
-        // Gets local tracks
-        var localAudio = session.media.local;
         var localStream = new MediaStream();
-
         if(pc.getSenders){
             pc.getSenders().forEach(function(sender) {
                 var strack = sender.track;
