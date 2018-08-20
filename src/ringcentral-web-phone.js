@@ -163,11 +163,10 @@
         );
 
         var modifiers = options.modifiers || [];
-        modifiers.push(SIP.WebRTC.Modifiers.stripTcpCandidates);
+        modifiers.push(SIP.Web.Modifiers.stripG722);
+        modifiers.push(SIP.Web.Modifiers.stripTcpCandidates);
 
-
-
-        var sessionDescriptionHandlerFactoryOptions = options.sessionDescriptionHandlerFactory || {
+        var sessionDescriptionHandlerFactoryOptions = options.sessionDescriptionHandlerFactoryOptions || {
             peerConnectionOptions: {
                 iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
                     rtcConfiguration: {
@@ -197,16 +196,21 @@
 
         var configuration = {
             uri: 'sip:' + this.sipInfo.username + '@' + this.sipInfo.domain,
-            wsServers: this.sipInfo.outboundProxy && this.sipInfo.transport
-                ? this.sipInfo.transport.toLowerCase() + '://' + this.sipInfo.outboundProxy
-                : this.sipInfo.wsServers,
+
+            transportOptions: {
+                wsServers: this.sipInfo.outboundProxy && this.sipInfo.transport
+                    ? this.sipInfo.transport.toLowerCase() + '://' + this.sipInfo.outboundProxy
+                    : this.sipInfo.wsServers,
+                traceSip: true,
+            },
             authorizationUser: this.sipInfo.authorizationId,
             password: this.sipInfo.password,
-            traceSip: true,
             stunServers: this.sipInfo.stunServers || ['stun:74.125.194.127:19302'], //FIXME Hardcoded?
             turnServers: [],
             log: {
-                level: options.logLevel || 1 //FIXME LOG LEVEL 3
+                level: options.logLevel || 1 ,//FIXME LOG LEVEL 3
+                builtinEnabled : options.builtinEnabled || true,
+                connector  : options.connector|| null
             },
             domain: this.sipInfo.domain,
             autostart: true,
