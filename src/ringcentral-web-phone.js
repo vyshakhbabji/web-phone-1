@@ -202,6 +202,9 @@
                     ? this.sipInfo.transport.toLowerCase() + '://' + this.sipInfo.outboundProxy
                     : this.sipInfo.wsServers,
                 traceSip: true,
+                maxReconnectionAttempts: options.maxReconnectionAttempts || 3,
+                reconnectionTimeout: options.reconnectionTimeout || 5,
+                connectionTimeout: options.connectionTimeout || 5
             },
             authorizationUser: this.sipInfo.authorizationId,
             password: this.sipInfo.password,
@@ -215,11 +218,7 @@
             domain: this.sipInfo.domain,
             autostart: true,
             register: true,
-            userAgentString: userAgentString,
-
-            wsServerMaxReconnection: options.wsServerMaxReconnection || 3,
-            connectionRecoveryMaxInterval: options.connectionRecoveryMaxInterval || 60,
-            connectionRecoveryMinInterval: options.connectionRecoveryMinInterval || 2,
+            userAgentString: userAgentString,           
             sessionDescriptionHandlerFactoryOptions: sessionDescriptionHandlerFactoryOptions,
             sessionDescriptionHandlerFactory : sessionDescriptionHandlerFactory
         };
