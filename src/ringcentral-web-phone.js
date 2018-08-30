@@ -269,7 +269,7 @@
         this.userAgent.sendMessage = sendMessage;
         this.userAgent.transport._onMessage = this.userAgent.transport.onMessage;
         this.userAgent.transport.onMessage = onMessage;
-        this.userAgent.register();
+        this.userAgent.start();
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
