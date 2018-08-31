@@ -216,7 +216,7 @@
                 connector  : options.connector|| null
             },
             domain: this.sipInfo.domain,
-            autostart: true,
+            autostart: false,
             register: true,
             userAgentString: userAgentString,           
             sessionDescriptionHandlerFactoryOptions: sessionDescriptionHandlerFactoryOptions,
@@ -266,9 +266,9 @@
         this.userAgent.onSession = options.onSession || null;
         this.userAgent.createRcMessage = createRcMessage;
         this.userAgent.sendMessage = sendMessage;
-        this.userAgent.transport._onMessage = this.userAgent.transport.onMessage;
-        this.userAgent.transport.onMessage = onMessage;
-        this.userAgent.register();
+        this.userAgent._onMessage = this.userAgent.onTransportReceiveMsg;
+        this.userAgent.onTransportReceiveMsg = onMessage.bind(this.userAgent);
+        this.userAgent.start();
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
