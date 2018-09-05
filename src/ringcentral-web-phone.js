@@ -173,7 +173,7 @@
                     rtcpMuxPolicy: 'negotiate'
                 }
             },
-            constraints: defaultMediaConstraints,
+            constraints: options.mediaConstraints||defaultMediaConstraints,
             modifiers: modifiers
         };
 
@@ -736,10 +736,6 @@
 
         //FIXME Backend should know it already
         if (options.homeCountryId) { options.extraHeaders.push('P-rc-country-id: ' + options.homeCountryId); }
-
-        options.media = options.media || {};
-        options.media.constraints = options.media.constraints || defaultMediaConstraints;
-
         options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
 
         ua.audioHelper.playOutgoing(true);
@@ -785,9 +781,6 @@
 
         options = options || {};
         options.extraHeaders = (options.extraHeaders || []).concat(session.ua.defaultHeaders);
-        options.media = options.media || {};
-        options.media.constraints = options.media.constraints || defaultMediaConstraints;
-
         options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
 
         return new Promise(function(resolve, reject) {
@@ -1013,7 +1006,6 @@
         var session = this;
         options = options || {}
         options.sessionDescriptionHandlerOptions = options.sessionDescriptionHandlerOptions || {};
-        options.sessionDescriptionHandlerOptions.constraints = options.sessionDescriptionHandlerOptions.constraints || defaultMediaConstraints;
         return session.__reinvite(options, modifier);
     }
 
