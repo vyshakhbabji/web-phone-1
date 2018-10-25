@@ -1,0 +1,337 @@
+
+PUBLISH SPECIFICATION
+
+PUBLISH sip:rtcpxr@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+Max-Forwards: 70
+From: <sip:16193332119101@[local_ip]:[local_port]>;tag=[call_number]
+To: <sip:rtcpxr@[remote_ip]:[remote_port]>
+Call-ID: [call_id]
+CSeq: 21782 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+User-Agent: Softphone/8.3.6 (RingCentral (1210); Windows 7 (64 bits)/6.1.7601; revision: 24042)
+Content-Type: application/vq-rtcpxr
+Content-Length: [len]
+
+VQSessionReport: CallTerm
+CallID: 3c147e38af8d4826a28a6bfdd7fab19e
+LocalID: <sip:16193332119101@10.14.32.223>
+RemoteID: <sip:2102@199.255.120.163>
+OrigID: <sip:2102@199.255.120.163>
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on
+JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500
+PacketLoss: NLR=0.0 JDR=0.0
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=4.5 MOSCQ=4.5
+DialogID: 3c147e38af8d4826a28a6bfdd7fab19e;to-tag=4b8706e57a48471395f6e052f866718a;from-tag=10.13.22.241-5070-4da91c6d4d4c42
+
+
+
+
+Default PUBLISH
+
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+Via: SIP/2.0/WSS e3uri5c50ri7.invalid;branch=z9hG4bK2531588
+Max-Forwards: 70
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=0co96ocbar
+Call-ID: 62vnp23t8car7aelkjod
+CSeq: 2428 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+Supported: outbound
+User-Agent: WebPhoneDemo/1.0.0 (Macintosh; Intel Mac OS X 10_12_5) RCWEBPHONE/0.6.0
+Content-Type: application/vq-rtcpxr
+Content-Length: 560
+
+VQSessionReport: CallTerm
+CallID:
+LocalID:
+RemoteID:
+OrigID:
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on
+JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500
+PacketLoss: NLR=0.0 JDR=0.0
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=4.5 MOSCQ=4.5
+DialogID: ;to-tag=;from-tag=n7v399nlvj
+
+
+
+Comparison:
+
+HEADER:
+
+PUBLISH sip:rtcpxr@[remote_ip]:[remote_port] SIP/2.0
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+Via: SIP/2.0/WSS 29rbn3rhajfa.invalid;branch=z9hG4bK6691680
+
+Max-Forwards: 70
+Max-Forwards: 70
+
+From: <sip:16193332119101@[local_ip]:[local_port]>;tag=[call_number]
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=u5es5a1lif
+
+To: <sip:rtcpxr@[remote_ip]:[remote_port]>
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+
+Call-ID: [call_id]
+Call-ID: 8n7t0vgo527t0s71h8n8
+
+CSeq: 21782 PUBLISH
+CSeq: 8482 PUBLISH
+
+Event: vq-rtcpxr
+Event: vq-rtcpxr
+
+Expires: 60
+Expires: 60
+
+User-Agent: Softphone/8.3.6 (RingCentral (1210); Windows 7 (64 bits)/6.1.7601; revision: 24042)
+User-Agent: WebPhoneDemo/1.0.0 (Macintosh; Intel Mac OS X 10_12_5) RCWEBPHONE/0.6.0
+
+Content-Type: application/vq-rtcpxr
+Content-Type: application/vq-rtcpxr
+
+Content-Length: [len]
+Content-Length: 2
+
+Supported: outbound
+
+
+BODY:
+
+VQSessionReport: CallTerm
+CallID:
+LocalID:
+RemoteID:
+OrigID:
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00294823
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on
+JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500
+PacketLoss: NLR=0.0 JDR=0.0
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=4.5 MOSCQ=4.5
+DialogID: ;to-tag=;from-tag=n7v399nlvj
+
+///////////////////// outlogs //////////////////////////////////////
+
+// audioOutputLevel: "45"
+// bytesReceived: "19479"
+// googAccelerateRate: "0"
+// googCodecName: "opus"
+// googCurrentDelayMs: "52"
+// googDecodingCNG: "0"
+// googDecodingCTN: "994"
+// googDecodingCTSG: "0"
+// googDecodingMuted: "0"
+// googDecodingNormal: "993"
+// googDecodingPLC: "1"
+// googDecodingPLCCNG: "0"
+// googExpandRate: "0"
+// googJitterBufferMs: "22"
+// googJitterReceived: "0"
+// googPreemptiveExpandRate: "0"
+// googPreferredJitterBufferMs: "20"
+// googSecondaryDecodedRate: "0"
+// googSecondaryDiscardedRate: "1"
+// googSpeechExpandRate: "0"
+// id: "ssrc_2532294493_recv"
+// mediaType: "audio"
+// packetsLost: "0"
+// packetsReceived: "496"
+// ssrc: "2532294493"
+// timestamp: Wed Oct 17 2018 00:04:19 GMT-0700 (Pacific Daylight Time) {}
+// totalAudioEnergy: "0.126431"
+// totalSamplesDuration: "9.94"
+// transportId: "Channel-audio-1"
+// type: "ssrc"
+
+
+// PACKET LOSS  ===== >  NLR  ===== >  6%                 == packetLost /( packetRecieved + packetLost )* 100
+//
+// JITTER AVG   ===== > JBN   ===== >  5ms       RFC7005   ===    googJitterReceived: "0"   ?  avg [ a,b,c,d,e, f, ]
+//
+// JITTER MAX   ======> JBM  ======>  11ms      max [ a,b,c,d,e, f, ]
+//
+// JDR          ======> JDR =======> 107%    JitterBufferDiscardRate     googSecondaryDiscardedRate?
+//
+//Score on metrix  ====> MOSLQ ======> 3.7
+
+
+
+// var xrBodyy = 'VQSessionReport: CallTerm\r\n' +
+//     'CallID: ' + XXXXXXX + '\r\n' +
+//     'LocalID: ' + XXXXXXXX + '\r\n' +
+//     'RemoteID: ' + XXXXXXXX + '\r\n' +
+//     'OrigID: ' + XXXXXXXX + '\r\n' +
+//     'LocalAddr: XXXXXXXX ' +
+//     'RemoteAddr: XXXXXXXXX \r\n' +
+//     'LocalMetrics:\r\n' +
+//     'Timestamps: START=XXXXXXXX STOP=XXXXXXXX \r\n' +
+//     'SessionDesc: PT=X PD=opus SR=X FD=X FPP=X PPS=X PLC=X SSUP=on\r\n' +
+//     'JitterBuffer: JBA=X JBR=X JBN=3 JBM=4 JBX=X\r\n' +
+//     'PacketLoss: NLR=6.0 JDR=7.0\r\n' +
+//     'BurstGapLoss: BLD=X BD=X GLD=X GD=X GMIN=X\r\n' +
+//     'Delay: RTD=X ESD=X SOWD=X IAJ=X\r\n' +
+//     'QualityEst: MOSLQ=1.4 MOSCQ=X\r\n' +
+//     'DialogID: ' + X + ';to-tag=' + X + ';from-tag=' + X ;
+
+
+
+FINAL PUBLISH :
+
+OutGoing = Disconnect From Client
+
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+Via: SIP/2.0/WSS cq1cs92gt9ac.invalid;branch=z9hG4bK5878029
+Max-Forwards: 70
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=eb39pr93ln
+Call-ID: ov4djg0fprukhgq50hve
+CSeq: 5133 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+Supported: outbound
+User-Agent: WebPhoneDemo/1.0.0 Macintosh-Intel-Mac-OS-X-10_12_5 RCWEBPHONE/0.6.0
+Content-Type: application/vq-rtcpxr
+Content-Length: 738
+
+VQSessionReport: CallTerm
+CallID: ov4djofbiv7g9d38tuj4
+LocalID: <sip:17203861294*101@sip.ringcentral.com>;tag=th7cmbm2j8
+RemoteID: <sip:6505154891@sip.ringcentral.com>
+OrigID: <sip:17203861294*101@sip.ringcentral.com>;tag=th7cmbm2j8
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00000000
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=0 PD=opus SR=0 FD=0 FPP=0 PPS=0 PLC=0 SSUP=on
+JitterBuffer: JBA=0 JBR=0 JBN=38.5 JBM=55 JBX=0
+PacketLoss: NLR=0.03 JDR=1
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=0
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=0 MOSCQ=0.0
+DialogID: ov4djofbiv7g9d38tuj4;to-tag=;from-tag=th7cmbm2j8
+
+
+
+OutGoing = Disconnect by Device
+
+
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+Via: SIP/2.0/WSS cq1cs92gt9ac.invalid;branch=z9hG4bK6566198
+Max-Forwards: 70
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=d7ajmdp8ni
+Call-ID: ov4dj78bbmb3oqg5he84
+CSeq: 2624 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+Supported: outbound
+User-Agent: WebPhoneDemo/1.0.0 Macintosh-Intel-Mac-OS-X-10_12_5 RCWEBPHONE/0.6.0
+Content-Type: application/vq-rtcpxr
+Content-Length: 752
+
+VQSessionReport: CallTerm
+CallID: ov4dj4m3iuk8urbh6kov
+LocalID: <sip:17203861294*101@sip.ringcentral.com>;tag=k27opu4v3n
+RemoteID: <sip:6505154891@sip.ringcentral.com>
+OrigID: <sip:17203861294*101@sip.ringcentral.com>;tag=k27opu4v3n
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00000000
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=0 PD=opus SR=0 FD=0 FPP=0 PPS=0 PLC=0 SSUP=on
+JitterBuffer: JBA=0 JBR=0 JBN=51.166666666666664 JBM=93 JBX=0
+PacketLoss: NLR=0.03 JDR=1
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=0
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=0 MOSCQ=0.0
+DialogID: ov4dj4m3iuk8urbh6kov;to-tag=;from-tag=k27opu4v3n
+
+
+
+Incoming  = Disconnect by Client
+
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+Via: SIP/2.0/WSS cq1cs92gt9ac.invalid;branch=z9hG4bK9235810
+Max-Forwards: 70
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=vfibff4s1t
+Call-ID: ov4djbdlmlv7auim8t7a
+CSeq: 7496 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+Supported: outbound
+User-Agent: WebPhoneDemo/1.0.0 Macintosh-Intel-Mac-OS-X-10_12_5 RCWEBPHONE/0.6.0
+Content-Type: application/vq-rtcpxr
+Content-Length: 822
+
+VQSessionReport: CallTerm
+CallID: 6acaae4bf1934f09aa78b54fb221b276
+LocalID: <sip:+18885287464@104.245.57.81>;tag=10.13.22.28-5070-de70d13b0fd64c9
+RemoteID: <sip:17203861294*101@50.207.16.19>
+OrigID: <sip:+18885287464@104.245.57.81>;tag=10.13.22.28-5070-de70d13b0fd64c9
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00000000
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=0 PD=opus SR=0 FD=0 FPP=0 PPS=0 PLC=0 SSUP=on
+JitterBuffer: JBA=0 JBR=0 JBN=32.833333333333336 JBM=45 JBX=0
+PacketLoss: NLR=0.01 JDR=1
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=0
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=0 MOSCQ=0.0
+DialogID: 6acaae4bf1934f09aa78b54fb221b276;to-tag=;from-tag=10.13.22.28-5070-de70d13b0fd64c9
+
+
+Incoming =  Disconnect by Device
+
+PUBLISH sip:rtcpxr@rtcpxr.ringcentral.com:5060 SIP/2.0
+Via: SIP/2.0/WSS cq1cs92gt9ac.invalid;branch=z9hG4bK3395221
+Max-Forwards: 70
+To: <sip:rtcpxr@rtcpxr.ringcentral.com:5060>
+From: <sip:17203861294*101@sip.ringcentral.com>;tag=9f5migptn1
+Call-ID: ov4djlkn13gom8pp2he6
+CSeq: 3159 PUBLISH
+Event: vq-rtcpxr
+Expires: 60
+Supported: outbound
+User-Agent: WebPhoneDemo/1.0.0 Macintosh-Intel-Mac-OS-X-10_12_5 RCWEBPHONE/0.6.0
+Content-Type: application/vq-rtcpxr
+Content-Length: 822
+
+VQSessionReport: CallTerm
+CallID: b740d207b704451fbdfc032f0582b67a
+LocalID: <sip:+18885287464@104.245.57.81>;tag=10.13.22.39-5070-8600b60b20d24fa
+RemoteID: <sip:17203861294*101@50.207.16.19>
+OrigID: <sip:+18885287464@104.245.57.81>;tag=10.13.22.39-5070-8600b60b20d24fa
+LocalAddr: IP=10.14.32.223 PORT=56235 SSRC=0x00000000
+RemoteAddr: IP=199.255.120.163 PORT=5091 SSRC=0x00000000
+LocalMetrics:
+Timestamps: START=2017-01-05T00:45:38Z STOP=2017-01-05T00:45:52Z
+SessionDesc: PT=0 PD=opus SR=0 FD=0 FPP=0 PPS=0 PLC=0 SSUP=on
+JitterBuffer: JBA=0 JBR=0 JBN=34.333333333333336 JBM=42 JBX=0
+PacketLoss: NLR=0.01 JDR=1
+BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=0
+Delay: RTD=0 ESD=0 SOWD=0 IAJ=0
+QualityEst: MOSLQ=0 MOSCQ=0.0
+DialogID: b740d207b704451fbdfc032f0582b67a;to-tag=;from-tag=10.13.22.39-5070-8600b60b20d24fa

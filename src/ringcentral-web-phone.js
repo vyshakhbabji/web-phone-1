@@ -28,12 +28,13 @@
 
     var uuidKey = 'rc-webPhone-uuid';
 
-
-    var fromkey = '';
-
     var responseTimeout = 60000;
 
-    var pc = '';
+    var defaultMediaConstraints   =  {
+        audio: true,
+        video: false
+    };
+
 
     function uuid() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -69,7 +70,6 @@
 
         this._enabled = !!options.enabled;
         this.loadAudio(options);
-
     }
 
     AudioHelper.prototype._playSound = function(url, val, volume) {
@@ -153,48 +153,94 @@
         var id = options.uuid || localStorage.getItem(this.uuidKey) || uuid(); //TODO Make configurable
         localStorage.setItem(this.uuidKey, id);
 
-        // var rcMediaHandlerFactory = function(session, options) {
-        //     //TODO Override MediaHandler functions in order to disable TCP candidates
-        //     return new SIP.WebRTC.MediaHandler(session, options);
-        // };
-
         this.appKey = options.appKey;
         this.appName = options.appName;
         this.appVersion = options.appVersion;
 
-        var configuration = {
-            uri: 'sip:' + this.sipInfo.username + '@' + this.sipInfo.domain,
-            wsServers: this.sipInfo.outboundProxy && this.sipInfo.transport
-                ? this.sipInfo.transport.toLowerCase() + '://' + this.sipInfo.outboundProxy
-                : this.sipInfo.wsServers,
-            authorizationUser: this.sipInfo.authorizationId,
-            password: this.sipInfo.password,
-            traceSip: true,
-            stunServers: this.sipInfo.stunServers || ['stun:74.125.194.127:19302'], //FIXME Hardcoded?
-            turnServers: [],
-            log: {
-                level: options.logLevel || 1 //FIXME LOG LEVEL 3
+        var ua_match = navigator.userAgent.match(/\((.*?)\)/);
+        var app_client_os = (ua_match && ua_match.length && ua_match[1]).replace(/[^a-zA-Z0-9.:_]+/g,"-") || '';
+
+        var userAgentString = (
+            (options.appName ? (options.appName + (options.appVersion ? '/' + options.appVersion : '')) + ' ' : '') +
+            (app_client_os ? app_client_os  : '') +
+            ' RCWEBPHONE/' + WebPhone.version
+        );
+
+        var modifiers = options.modifiers || [];
+        modifiers.push(SIP.Web.Modifiers.stripG722);
+        modifiers.push(SIP.Web.Modifiers.stripTcpCandidates);
+
+        var sessionDescriptionHandlerFactoryOptions = options.sessionDescriptionHandlerFactoryOptions || {
+            peerConnectionOptions: {
+                iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
+                rtcConfiguration: {
+                    rtcpMuxPolicy: 'negotiate'
+                }
             },
-            domain: this.sipInfo.domain,
-            autostart: true,
-            register: true,
-            iceCheckingTimeout: this.sipInfo.iceCheckingTimeout || this.sipInfo.iceGatheringTimeout || 500,
-            // mediaHandlerFactory: rcMediaHandlerFactory,
-            rtcpMuxPolicy: "negotiate",
-            //disable TCP candidates
-            hackStripTcp:true
+            constraints: options.mediaConstraints||defaultMediaConstraints,
+            modifiers: modifiers
         };
 
 
+        var browserUa = navigator.userAgent.toLowerCase();
+        var isSafari = false;
+        var isFirefox = false;
+
+        if (browserUa.indexOf('safari') > -1 && browserUa.indexOf('chrome') < 0) {
+            isSafari = true;
+        } else if (browserUa.indexOf('firefox') > -1 && browserUa.indexOf('chrome') < 0) {
+            isFirefox = true;
+        }
+
+        if (isFirefox) {
+            sessionDescriptionHandlerFactoryOptions.alwaysAcquireMediaFirst = true;
+        }
+
+        var sessionDescriptionHandlerFactory =  options.sessionDescriptionHandlerFactory || [];
+
+        var configuration = {
+            uri: 'sip:' + this.sipInfo.username + '@' + this.sipInfo.domain,
+
+            transportOptions: {
+                wsServers: this.sipInfo.outboundProxy && this.sipInfo.transport
+                    ? this.sipInfo.transport.toLowerCase() + '://' + this.sipInfo.outboundProxy
+                    : this.sipInfo.wsServers,
+                traceSip: true,
+                maxReconnectionAttempts: options.maxReconnectionAttempts || 3,
+                reconnectionTimeout: options.reconnectionTimeout || 5,
+                connectionTimeout: options.connectionTimeout || 5
+            },
+            authorizationUser: this.sipInfo.authorizationId,
+            password: this.sipInfo.password,
+            stunServers: this.sipInfo.stunServers || ['stun:74.125.194.127:19302'], //FIXME Hardcoded?
+            turnServers: [],
+            log: {
+                level: options.logLevel || 1 ,//FIXME LOG LEVEL 3
+                builtinEnabled : options.builtinEnabled || true,
+                connector  : options.connector|| null
+            },
+            domain: this.sipInfo.domain,
+            autostart: false,
+            register: true,
+            userAgentString: userAgentString,
+            sessionDescriptionHandlerFactoryOptions: sessionDescriptionHandlerFactoryOptions,
+            sessionDescriptionHandlerFactory : sessionDescriptionHandlerFactory
+        };
         this.userAgent = new SIP.UA(configuration);
 
         this.userAgent.defaultHeaders = [
             'P-rc-endpoint-id: ' + id,
-            'RC-User-Agent: ' + (
-            (options.appName ? (options.appName + (options.appVersion ? '/' + options.appVersion : '')) + ' ' : '') +
-            'RCWEBPHONE/' + WebPhone.version),
             'Client-id:' + options.appKey
         ];
+
+        this.userAgent.media = {};
+
+        if (options.media && (options.media.remote && options.media.local)){
+            this.userAgent.media.remote = options.media.remote ;
+            this.userAgent.media.local = options.media.local;
+        }
+        else
+            this.userAgent.media = null;
 
         this.userAgent.sipInfo = this.sipInfo;
 
@@ -224,15 +270,14 @@
         this.userAgent.onSession = options.onSession || null;
         this.userAgent.createRcMessage = createRcMessage;
         this.userAgent.sendMessage = sendMessage;
-        this.userAgent.transport._onMessage = this.userAgent.transport.onMessage;
-        this.userAgent.transport.onMessage = onMessage;
-        this.userAgent.register();
-
+        this.userAgent._onMessage = this.userAgent.onTransportReceiveMsg;
+        this.userAgent.onTransportReceiveMsg = onMessage.bind(this.userAgent);
+        this.userAgent.start();
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
-    WebPhone.version = '0.4.4';
+    WebPhone.version = '0.6.0';
     WebPhone.uuid = uuid;
     WebPhone.delay = delay;
     WebPhone.extend = extend;
@@ -310,6 +355,9 @@
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
+
+
+
     function patchSession(session) {
 
         if (session.__patched) return session;
@@ -322,6 +370,8 @@
         session.__hold = session.hold;
         session.__unhold = session.unhold;
         session.__dtmf = session.dtmf;
+        session.__reinvite= session.reinvite;
+        session.__publish = session.publish;
 
         session.sendRequest = sendRequest;
         session.receiveRequest = receiveRequest;
@@ -329,6 +379,8 @@
         session.hold = hold;
         session.unhold = unhold;
         session.dtmf = dtmf;
+        session.reinvite=reinvite;
+        session.publish = publish;
 
         session.warmTransfer = warmTransfer;
         session.blindTransfer = blindTransfer;
@@ -339,22 +391,30 @@
         session.stopRecord = stopRecord;
         session.flip = flip;
 
-        //publish
-        session.publish =publish;
+        session.mute = mute;
+        session.unmute = unmute;
+        session.onLocalHold = onLocalHold;
+
+        session.media = session.ua.media;
+        session.addTrack = addTrack;
 
         session.on('replaced', patchSession);
-        // session.on('connecting', onConnecting);
 
         // Audio
         session.on('progress', function(incomingResponse) {
-            if (incomingResponse.status_code === 183 && incomingResponse.body) {
-                session.createDialog(incomingResponse, 'UAC');
-                session.mediaHandler.setDescription(incomingResponse).then(function() {
-                    session.status = 11; //C.STATUS_EARLY_MEDIA;
-                    session.hasAnswer = true;
-                });
-            }
+            stopPlaying();
+//             if (incomingResponse.status_code === 183 && incomingResponse.body) {
+//                 session.createDialog(incomingResponse, 'UAC');
+//                 session.sessionDescriptionHandler.setDescription(incomingResponse.body).then(function() {
+//                     session.status = 11; //C.STATUS_EARLY_MEDIA;
+//                     session.hasAnswer = true;
+//                 });
+//             }
         });
+
+        if(session.media)
+            session.on('trackAdded',addTrack);
+
         session.on('accepted', stopPlaying);
         session.on('rejected', stopPlaying);
         session.on('bye', stopPlaying);
@@ -362,8 +422,7 @@
         session.on('cancel', stopPlaying);
         session.on('failed', stopPlaying);
         session.on('replaced', stopPlaying);
-        session.mediaHandler.on('iceConnectionCompleted', stopPlaying);
-        session.mediaHandler.on('iceConnectionFailed', stopPlaying);
+
 
         function stopPlaying() {
             session.ua.audioHelper.playOutgoing(false);
@@ -375,16 +434,7 @@
             session.removeListener('cancel', stopPlaying);
             session.removeListener('failed', stopPlaying);
             session.removeListener('replaced', stopPlaying);
-            session.mediaHandler.removeListener('iceConnectionCompleted', stopPlaying);
-            session.mediaHandler.removeListener('iceConnectionFailed', stopPlaying);
         }
-
-
-
-        RTCPeerConnection.prototype.getPeerStats = window.getStats;
-
-        pc =  session.mediaHandler.peerConnection;
-
 
         if (session.ua.onSession) session.ua.onSession(session);
 
@@ -532,7 +582,6 @@
      * @return {Promise}
      */
     function sendReceive(session, command, options) {
-
         options = options || {};
 
         extend(command, options);
@@ -649,14 +698,13 @@
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
-    //publish
     /**
      * @private
      * @param {SIP.Session} session
      * @param {boolean} flag
      * @return {Promise}
      */
-    function setHold(session, flag) {
+    function setLocalHold(session, flag) {
         return new Promise(function(resolve, reject) {
 
             var options = {
@@ -667,11 +715,9 @@
             };
 
             if (flag) {
-                session.__hold(options);
-                publish(session,options);
+                resolve(session.__hold(options));
             } else {
-                session.__unhold(options);
-                publish(session,options);
+                resolve(session.__unhold(options));
             }
 
         });
@@ -689,8 +735,6 @@
 
         var ua = this;
 
-
-
         options = options || {};
         options.extraHeaders = (options.extraHeaders || []).concat(ua.defaultHeaders);
 
@@ -699,13 +743,9 @@
         //FIXME Backend should know it already
         if (options.homeCountryId) { options.extraHeaders.push('P-rc-country-id: ' + options.homeCountryId); }
 
-        options.media = options.media || {};
-        options.media.constraints = options.media.constraints || {audio: true, video: false};
-
         options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
 
         ua.audioHelper.playOutgoing(true);
-
         return patchSession(ua.__invite(number, options));
 
     }
@@ -719,9 +759,6 @@
      */
     function receiveRequest(request) {
         var session = this;
-
-        fromkey = request.getHeader('From');
-
         switch (request.method) {
             case SIP.C.INFO:
                 session.emit('RC_SIP_INFO', request);
@@ -733,27 +770,6 @@
                         return session;
                     }
                 }
-                break;
-            //Refresh invite should not be rejected with 488
-            case SIP.C.INVITE:
-                if (session.status === SIP.Session.C.STATUS_CONFIRMED) {
-                    if (request.call_id && session.dialog && session.dialog.id && request.call_id == session.dialog.id.call_id) {
-                        //TODO: check that SDP did not change
-                        session.logger.log('re-INVITE received');
-                        var localSDP = session.mediaHandler.peerConnection.localDescription.sdp;
-                        request.reply(200, null, ['Contact: ' + session.contact], localSDP, function() {
-                            session.status = SIP.Session.C.STATUS_WAITING_FOR_ACK;
-                            session.setInvite2xxTimer(request, localSDP);
-                            session.setACKTimer();
-                        });
-                        return session;
-                    }
-                    //else will be rejected with 488 by SIP.js
-                }
-                break;
-            //We need to analize NOTIFY messages sometimes, so we fire an event
-            case SIP.C.NOTIFY:
-                session.emit('RC_SIP_NOTIFY', request);
                 break;
         }
         return session.__receiveRequest.apply(session, arguments);
@@ -772,9 +788,6 @@
 
         options = options || {};
         options.extraHeaders = (options.extraHeaders || []).concat(session.ua.defaultHeaders);
-        options.media = options.media || {};
-        options.media.constraints = options.media.constraints || {audio: true, video: false};
-
         options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
 
         return new Promise(function(resolve, reject) {
@@ -792,10 +805,9 @@
             //TODO More events?
             session.once('accepted', onAnswered);
             session.once('failed', onFail);
-
             session.__accept(options);
-
         });
+
 
     }
 
@@ -808,16 +820,15 @@
      * @return {Promise}
      */
     function dtmf(dtmf, duration) {
-
         var session = this;
-
-        publish(session);
-
         duration = parseInt(duration) || 1000;
-        var peer = session.mediaHandler.peerConnection;
-        var stream = session.getLocalStreams()[0];
-        var dtmfSender = peer.createDTMFSender(stream.getAudioTracks()[0]);
-        if (dtmfSender !== undefined && dtmfSender.canInsertDTMF) {
+        var pc = session.sessionDescriptionHandler.peerConnection;
+        var senders = pc.getSenders();
+        var audioSender = senders.find(function(sender) {
+            return sender.track && sender.track.kind === 'audio';
+        });
+        var dtmfSender = audioSender.dtmf;
+        if (dtmfSender !== undefined && dtmfSender) {
             return dtmfSender.insertDTMF(dtmf, duration);
         }
         throw new Error('Send DTMF failed: ' + (!dtmfSender ? 'no sender' : (!dtmfSender.canInsertDTMF ? 'can\'t insert DTMF' : 'Unknown')));
@@ -830,8 +841,7 @@
      * @return {Promise}
      */
     function hold() {
-        //publish(option,this);
-        return setHold(this, true);
+        return setLocalHold(this, true);
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -841,7 +851,7 @@
      * @return {Promise}
      */
     function unhold() {
-        return setHold(this, false);
+        return setLocalHold(this, false);
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
@@ -862,74 +872,7 @@
 
         return new Promise(function(resolve, reject) {
             //Blind Transfer is taken from SIP.js source
-
-            // Check Session Status
-            if (session.status !== SIP.Session.C.STATUS_CONFIRMED) {
-                throw new SIP.Exceptions.InvalidStateError(session.status);
-            }
-
-            // normalizeTarget allows instances of SIP.URI to pass through unaltered,
-            // so try to make one ahead of time
-            try {
-                target = SIP.Grammar.parse(target, 'Refer_To').uri || target;
-            } catch (e) {
-                session.logger.debug(".refer() cannot parse Refer_To from", target);
-                session.logger.debug("...falling through to normalizeTarget()");
-            }
-
-            // Check target validity
-            target = session.ua.normalizeTarget(target);
-            if (!target) {
-                throw new TypeError('Invalid target: ' + originalTarget);
-            }
-
-            extraHeaders = extraHeaders.concat(session.ua.defaultHeaders).concat([
-                'Contact: ' + session.contact,
-                'Allow: ' + SIP.UA.C.ALLOWED_METHODS.toString(),
-                'Refer-To: ' + target
-            ]);
-
-            // Send the request
-            session.sendRequest(SIP.C.REFER, {
-                extraHeaders: extraHeaders,
-                body: options.body,
-                receiveResponse: function(response) {
-                    var timeout = null;
-                    if (response.status_code === 202) {
-                        var callId = response.call_id;
-
-                        var onNotify = function(request) {
-                            if (request.call_id === callId) {
-                                var body = request && request.body || '';
-                                switch (true) {
-                                    case /1[0-9]{2}/.test(body):
-                                        request.reply(200);
-                                        break;
-                                    case /2[0-9]{2}/.test(body):
-                                        session.terminate();
-                                        clearTimeout(timeout);
-                                        session.removeListener('RC_SIP_NOTIFY', onNotify);
-                                        resolve();
-                                        break;
-                                    default:
-                                        reject(body);
-                                        break;
-                                }
-                            }
-                        };
-
-                        timeout = setTimeout(function() {
-                            reject(new Error('Timeout: no reply'));
-                            session.removeListener('RC_SIP_NOTIFY', onNotify);
-                        }, responseTimeout);
-                        session.on('RC_SIP_NOTIFY', onNotify);
-                    }
-                    else {
-                        reject(new Error('The response status code is: ' + response.status_code + ' (waiting for 202)'));
-                    }
-                }
-            });
-
+            return session.refer(target, options);
         });
     }
 
@@ -945,7 +888,7 @@
 
         var session = this;
 
-        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
+        return (session.local_hold ? Promise.resolve(null) : session.hold())
             .then(function() { return delay(300); })
             .then(function() {
 
@@ -957,7 +900,7 @@
                 transferOptions = transferOptions || {};
                 transferOptions.extraHeaders = (transferOptions.extraHeaders || [])
                     .concat(session.ua.defaultHeaders)
-                    .concat(['Refer-By: ' + session.dialog.remote_target.toString()]);
+                    .concat(['Referred-By: ' + session.dialog.remote_target.toString()]);
 
                 //TODO return session.refer(newSession);
                 return session.blindTransfer(referTo, transferOptions);
@@ -978,7 +921,7 @@
 
         var session = this;
 
-        return (session.isOnHold() ? Promise.resolve(null) : session.hold())
+        return (session.local_hold ? Promise.resolve(null) : session.hold())
             .then(function() { return delay(300); })
             .then(function() {
                 return session.blindTransfer(target, options);
@@ -1061,163 +1004,140 @@
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
+    /**
+     * @this {SIP.Session}
+     * @return {Promise}
+     */
 
-
+    function reinvite (options, modifier){
+        var session = this;
+        options = options || {}
+        options.sessionDescriptionHandlerOptions = options.sessionDescriptionHandlerOptions || {};
+        return session.__reinvite(options, modifier);
+    }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
 
 
-    //Straightforward way of calling getStat API
-
-
-    // function myGetStats(peer, callback) {
-    //     console.log("ADDDED MYGETSTAT");
-    //     if (!!navigator.mozGetUserMedia) {
-    //         peer.getStats(
-    //             function (res) {
-    //                 var items = [];
-    //                 res.forEach(function (result) {
-    //                     items.push(result);
-    //                 });
-    //                 callback(items);
-    //             },
-    //             callback
-    //         );
-    //     } else {
-    //         peer.getStats(function (res) {
-    //             var items = [];
-    //             res.result().forEach(function (result) {
-    //                 var item = {};
-    //                 result.names().forEach(function (name) {
-    //                     item[name] = result.stat(name);
-    //                     console.log('(name)', name);
-    //                 });
-    //                 item.id = result.id;
-    //                 item.type = result.type;
-    //                 item.timestamp = result.timestamp;
-    //                 items.push(item);
-    //             });
-    //             callback(items);
-    //         });
-    //     }
-    // };
-    //
-    // function getStats(peer) {
-    //     console.log("GET STAT ADDED");
-    //     myGetStats(peer, function (results) {
-    //         for (var i = 0; i < results.length; ++i) {
-    //             var res = results[i];
-    //             console.log(res);
-    //         }
-    //     });
-    // }
-
-
-
-    function fetchStat() {
-
-        //using https://github.com/muaz-khan/getStats
-        return new Promise(function (resolve, reject) {
-            var res = pc.getPeerStats(pc, function (result) {
-                var data = {};
-                data.connectionType = result.connectionType;
-                data.bandwidth = result.bandwidth;
-                data.timestamp = (new Date()).toISOString();
-                // to access native "results" array
-                result.results.forEach(function (stat) {
-                    if (stat.type === 'ssrc' && stat.transportId === 'Channel-audio-1') {
-                        data.packetsLost = stat.packetsLost;
-                        data.packetsSent = stat.packetsSent;
-                        data.audioInputLevel = stat.audioInputLevel;
-                        data.trackId = stat.googTrackId; // media stream track id
-                        data.mediaType = stat.mediaType; // audio or video
-                        data.isSending = stat.id.indexOf('_send') !== -1; // sender or receiver
-                        data.ssrc = stat.ssrc;
-                        data.timestamp = stat.timestamp;
-                        data.rtt = stat.googRtt;
-                        // console.log('SendRecv type', item.id.split('_send').pop());
-                        // console.log('MediaStream track type', item.mediaType);
-                    }
-                    if (stat.type === 'googComponent' && stat.id === 'Channel-audio-2') {
-                        data.startTimestamp = stat.timestamp;
-                    }
-                });
-                console.log('result: ', result);
-                resolve(data);
-                // TODO : Need to somehow fetch this result and send as body
-                // console.log(result.results);
+    function toggleMute (session , mute) {
+        var pc = session.sessionDescriptionHandler.peerConnection;
+        if (pc.getSenders) {
+            pc.getSenders().forEach(function(sender) {
+                if (sender.track) {
+                    sender.track.enabled = !mute;
+                }
             });
-        });
-
-    }
-
-    //PUBLISH
-
-    function publish(session, options) {
-
-        // getStats(pc);
-
-        return fetchStat().then(function (result) {
-            options = options || {};
-            options.extraHeaders = (options.extraHeaders || []).concat(session.ua.defaultHeaders);
-            options.media = options.media || {};
-            options.media.constraints = options.media.constraints || {audio: true, video: false};
-            options.RTCConstraints = options.RTCConstraints || {optional: [{DtlsSrtpKeyAgreement: 'true'}]};
-            options.extraHeaders.push('Event: vq-rtcpxr');
-            options.extraHeaders.push('Content-Type: application/vq-rtcpxr');
-            options.extraHeaders.push('Contact: ' + session.contact);
-
-
-            var publishRequest = session.ua.request('PUBLISH', 'rtcpxr@rtcpxr.ringcentral.com:5060', {
-                extraHeaders: options.extraHeaders
-            });
-
-            publishRequest.request.to = 'rtcpxr@rtcpxr.ringcentral.com:5060';
-            publishRequest.request.setHeader('Expires', '60');
-
-            var callids = (session.dialog && session.dialog.id.call_id) || publishRequest.request.call_id;
-            var fromLocalID = publishRequest.request.from.friendlyName;
-            var localIp = result.connectionType.local.ipAddress[0].split(':')[0];
-            var localPort = result.connectionType.local.ipAddress[0].split(':')[1];
-            var remoteIp = result.connectionType.remote.ipAddress[0].split(':')[0];
-            var remotePort = result.connectionType.remote.ipAddress[0].split(':')[1];
-            //Dummy Data
-            var xrBody = 'VQSessionReport: CallTerm\r\n' +
-                'CallID: ' + callids + '\r\n' +
-                'LocalID: ' + fromLocalID + '\r\n' +
-                'RemoteID: ' + fromLocalID + '\r\n' +
-                'OrigID: ' + fromLocalID + '\r\n' +
-                'LocalAddr: IP=' + localIp + ' PORT=' + localPort + ' SSRC=0x' + result.ssrc.toString(16) + '\r\n' +
-                'RemoteAddr: IP=' + remoteIp + ' PORT=' + remotePort + ' SSRC=0x00000000\r\n' +
-                'LocalMetrics:\r\n' +
-                'Timestamps: START=' + result.startTimestamp + ' STOP=' + result.timestamp + '\r\n' +
-                'SessionDesc: PT=104 PD=opus SR=16000 FD=20 FPP=1 PPS=50 PLC=2 SSUP=on\r\n' +
-                'JitterBuffer: JBA=3 JBR=7 JBN=0 JBM=0 JBX=500\r\n' +
-                'PacketLoss: NLR=0.0 JDR=0.0\r\n' +
-                'BurstGapLoss: BLD=0 BD=0 GLD=0 GD=0 GMIN=16\r\n' +
-                'Delay: RTD=0 ESD=0 SOWD=0 IAJ=0\r\n' +
-                'QualityEst: MOSLQ=4.5 MOSCQ=4.5\r\n' +
-                'DialogID: ' + callids + ';to-tag=' + (session.to_tag || '') + ';from-tag=' + (session.from_tag || '');
-            //TODO: Add body to the Publish
-            publishRequest.request.body = xrBody;
-
-            // publishRequest.on('accepted', function (response, cause) {
-            //     console.log("Accepted OBJECT", response);
-            // });
-            // publishRequest.on('rejected', function (response, cause) {
-            //     console.log("Rejected OBJECT", response);
-            // });
-
-            return new Promise(function (resolve, reject) {
-                setTimeout(function () {
-                    resolve(publishRequest.send());
-                }, 300);
-            });
-        });
-    }
-
+        }
+    };
 
     /*--------------------------------------------------------------------------------------------------------------------*/
+    function mute (silent){
+        if (this.state !== this.STATUS_CONNECTED) {
+            this.logger.warn('An acitve call is required to mute audio');
+            return;
+        }
+        this.logger.log('Muting Audio');
+        if (!silent) {
+            this.emit('muted',this.session);
+        }
+        return toggleMute(this, true);
+    };
+
+    /*--------------------------------------------------------------------------------------------------------------------*/
+
+    function unmute(silent) {
+        if (this.state !== this.STATUS_CONNECTED) {
+            this.logger.warn('An active call is required to unmute audio');
+            return;
+        }
+        this.logger.log('Unmuting Audio');
+        if (!silent) {
+            this.emit('unmuted',this.session);
+        }
+        return toggleMute(this,false);
+    };
+
+    /*--------------------------------------------------------------------------------------------------------------------*/
+
+    /**
+     * @this {SIP.Session}
+     * @return boolean
+     */
+
+    function onLocalHold (){
+        var session = this;
+        return session.local_hold;
+    };
+
+    /*--------------------------------------------------------------------------------------------------------------------*/
+
+
+
+    function addTrack(remoteAudioEle, localAudioEle){
+
+        var session = this;
+        var pc = session.sessionDescriptionHandler.peerConnection;
+
+        var remoteAudio;
+        var localAudio;
+
+        if(remoteAudioEle&&localAudioEle){
+            remoteAudio = remoteAudioEle;
+            localAudio = localAudioEle;
+        }
+        else if(session.media){
+            remoteAudio = session.media.remote;
+            localAudio = session.media.local;
+        }
+        else
+            throw new Error('HTML Media Element not Defined');
+
+
+        var remoteStream = new MediaStream();
+        if(pc.getReceivers){
+            pc.getReceivers().forEach(function(receiver) {
+                var rtrack = receiver.track;
+                if(rtrack){
+                    remoteStream.addTrack(rtrack);
+                }});
+        }
+        else{
+            remoteStream = pc.getRemoteStreams()[0];
+        }
+        remoteAudio.srcObject = remoteStream;
+        remoteAudio.play().catch(function() {
+            session.logger.log('local play was rejected');
+        });
+
+        var localStream = new MediaStream();
+        if(pc.getSenders){
+            pc.getSenders().forEach(function(sender) {
+                var strack = sender.track;
+                if (strack && strack.kind === 'audio') {
+                    localStream.addTrack(strack);
+                }
+            });
+        }
+        else{
+            localStream = pc.getLocalStreams()[0];
+        }
+        localAudio.srcObject = localStream;
+        localAudio.play().catch(function() {
+            session.logger.log('local play was rejected');
+        });
+    }
+
+
+    function publish(body, options){
+
+        var session = this;
+        options = options||{};
+        var targetUrl = options.targetUrl||'rtcpxr@rtcpxr.ringcentral.com:5060';
+        var event = options.event || 'vq-rtcpxr';
+        options.expires= 60;
+        options.contentType = "application/vq-rtcpxr";
+        session.ua.publish(targetUrl,event,body, options);
+    }
 
     return WebPhone;
 
