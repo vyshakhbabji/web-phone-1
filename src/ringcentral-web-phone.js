@@ -169,6 +169,7 @@
         var modifiers = options.modifiers || [];
         modifiers.push(SIP.Web.Modifiers.stripG722);
         modifiers.push(SIP.Web.Modifiers.stripTcpCandidates);
+        modifiers.push(SIP.Web.Modifiers.addMidLines);
 
         var sessionDescriptionHandlerFactoryOptions = options.sessionDescriptionHandlerFactoryOptions || {
             peerConnectionOptions: {
@@ -401,13 +402,13 @@
         // Audio
         session.on('progress', function(incomingResponse) {
             stopPlaying();
-            if (incomingResponse.status_code === 183 && incomingResponse.body) {
-                session.createDialog(incomingResponse, 'UAC');
-                session.sessionDescriptionHandler.setDescription(incomingResponse.body).then(function() {
-                    session.status = 11; //C.STATUS_EARLY_MEDIA;
-                    session.hasAnswer = true;
-                });
-            }
+            // if (incomingResponse.status_code === 183 && incomingResponse.body) {
+            //     session.createDialog(incomingResponse, 'UAC');
+            //     session.sessionDescriptionHandler.setDescription(incomingResponse.body).then(function() {
+            //         session.status = 11; //C.STATUS_EARLY_MEDIA;
+            //         session.hasAnswer = true;
+            //     });
+            // }
         });
 
         if(session.media)
