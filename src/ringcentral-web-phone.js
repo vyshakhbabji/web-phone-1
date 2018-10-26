@@ -169,7 +169,7 @@
         var modifiers = options.modifiers || [];
         modifiers.push(SIP.Web.Modifiers.stripG722);
         modifiers.push(SIP.Web.Modifiers.stripTcpCandidates);
-        modifiers.push(SIP.Web.Modifiers.addMidLines);
+
 
         var sessionDescriptionHandlerFactoryOptions = options.sessionDescriptionHandlerFactoryOptions || {
             peerConnectionOptions: {
@@ -195,6 +195,7 @@
 
         if (isFirefox) {
             sessionDescriptionHandlerFactoryOptions.alwaysAcquireMediaFirst = true;
+            // modifiers.push(SIP.Web.Modifiers.addMidLines);
         }
 
         var sessionDescriptionHandlerFactory =  options.sessionDescriptionHandlerFactory || [];
