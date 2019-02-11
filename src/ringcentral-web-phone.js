@@ -1345,11 +1345,12 @@
     function calculateStats(qosStatsObj){
 
         var rawNLR = qosStatsObj.packetLost* 100 / (qosStatsObj.packetsReceived+qosStatsObj.packetLost);
+        var rawJBN = qosStatsObj.totalIntervalCount > 0 ? qosStatsObj.totalSumJitter / qosStatsObj.totalIntervalCount : 0;
 
         return Object.assign({}, qosStatsObj, {
             NLR:  parseFloat(rawNLR || 0).toFixed(2),
             //JitterBufferNominal
-            JBN: (parseFloat(qosStatsObj.totalSumJitter)/ qosStatsObj.totalIntervalCount).toFixed(2),
+            JBN: parseFloat(rawJBN).toFixed(2),
             //JitterBufferDiscardRate
             JDR:  parseFloat(qosStatsObj.jitterBufferDiscardRate).toFixed(2),
             //MOS Score
