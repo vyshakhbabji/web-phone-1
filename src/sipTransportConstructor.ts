@@ -79,6 +79,8 @@ var computeRandomTimeout = (
 
 async function __connect(this: WebPhoneSIPTransport, options?: any): Promise<void>{
    return await this.__connect(options).catch(async (err)=>{
+       this.emit('wsConnectionError');
+       this.logger.log('Connection Error occured. Trying to reconnect to websocket...');
        this.onError(err);
        this.disposeWs();
        await this.reconnect();
@@ -158,7 +160,7 @@ function isSipErrorCode(this: WebPhoneSIPTransport, message: string): boolean {
 function scheduleSwitchBackMainProxy(this: WebPhoneSIPTransport): void {
     const randomInterval = 15 * 60 * 1000; //15 min
 
-    let switchBackInterval = this.switchBackInterval ? this.switchBackInterval * 1000 : null;
+    let switchBackInterval = this.switchBackInterval ? this.switchBackInterval * 60 *  1000 : null;
 
     // Add random time to expand clients connections in time;
     if (switchBackInterval) {
