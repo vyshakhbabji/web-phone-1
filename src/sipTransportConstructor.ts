@@ -25,6 +25,7 @@ export interface WebPhoneSIPTransport extends Transport {
     reconnectTimer: any;
     disposeWs: () => void;
     onError: (e:any) => void;
+    mainProxy: any;
 }
 
 export const TransportConstructorWrapper = (SipTransportConstructor: any, webPhoneOptions: any): any => {
@@ -34,6 +35,7 @@ export const TransportConstructorWrapper = (SipTransportConstructor: any, webPho
         transport.nextReconnectInterval = 0;
         transport.sipErrorCodes = webPhoneOptions.sipErrorCodes;
         transport.switchBackInterval = webPhoneOptions.switchBackInterval;
+        transport.mainProxy = transport.configuration.wsServers[0];
 
         transport.computeRandomTimeout = computeRandomTimeout;
         transport.reconnect = reconnect.bind(transport);
@@ -169,11 +171,9 @@ function scheduleSwitchBackMainProxy(this: WebPhoneSIPTransport): void {
             'Try to switch back to main proxy after ' + Math.round(switchBackInterval / 1000 / 60) + ' min'
         );
 
-        const mainProxy = this.configuration.wsServers[0];
-
-        mainProxy.switchBackTimer = setTimeout(() => {
-            mainProxy.isError = false;
-            mainProxy.switchBackTimer = null;
+        this.mainProxy.switchBackTimer = setTimeout(() => {
+            this.mainProxy.isError = false;
+            this.mainProxy.switchBackTimer = null;
             this.emit('switchBackProxy');
         }, switchBackInterval);
     } else {
@@ -196,18 +196,14 @@ function __isCurrentMainProxy(this: WebPhoneSIPTransport): boolean {
 }
 
 function __onConnectedToMain(this: WebPhoneSIPTransport): void {
-    const mainProxy = this.configuration.wsServers[0];
-
-    if (mainProxy.switchBackTimer) {
-        clearTimeout(mainProxy.switchBackTimer);
-        mainProxy.switchBackTimer = null;
+    if (this.mainProxy.switchBackTimer) {
+        clearTimeout(this.mainProxy.switchBackTimer);
+        this.mainProxy.switchBackTimer = null;
     }
 }
 
 function __onConnectedToBackup(this: WebPhoneSIPTransport): void {
-    const mainProxy = this.configuration.wsServers[0];
-
-    if (!mainProxy.switchBackTimer) {
+    if (!this.mainProxy.switchBackTimer) {
         this.scheduleSwitchBackMainProxy();
     }
 }
