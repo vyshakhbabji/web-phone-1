@@ -20,6 +20,7 @@ export interface WebPhoneSIPTransport extends Transport {
     __isCurrentMainProxy: typeof __isCurrentMainProxy;
     __onConnectedToMain: typeof __onConnectedToMain;
     __onConnectedToBackup: typeof __onConnectedToBackup;
+    __clearSwitchBackTimer: typeof __clearSwitchBackTimer;
     __connect: typeof Transport.prototype.connect;
     connect: typeof __connect;
     reconnectTimer: any;
@@ -46,6 +47,7 @@ export const TransportConstructorWrapper = (SipTransportConstructor: any, webPho
         transport.__afterWSConnected = __afterWSConnected.bind(transport);
         transport.__onConnectedToBackup = __onConnectedToBackup.bind(transport);
         transport.__onConnectedToMain = __onConnectedToMain.bind(transport);
+        transport.__clearSwitchBackTimer = __clearSwitchBackTimer.bind(transport);
         transport.__connect = transport.connect;
         transport.connect = __connect.bind(transport);
 
@@ -108,6 +110,7 @@ async function reconnect(this: WebPhoneSIPTransport, forceReconnectToMain?: bool
         this.status = C.STATUS_CLOSED;
         this.emit('closed');
         this.resetServerErrorStatus();
+        this.__clearSwitchBackTimer();
         return;
     }
 
@@ -195,11 +198,15 @@ function __isCurrentMainProxy(this: WebPhoneSIPTransport): boolean {
     return this.server === this.configuration.wsServers[0];
 }
 
-function __onConnectedToMain(this: WebPhoneSIPTransport): void {
+function __clearSwitchBackTimer(this: WebPhoneSIPTransport): void {
     if (this.mainProxy.switchBackTimer) {
         clearTimeout(this.mainProxy.switchBackTimer);
         this.mainProxy.switchBackTimer = null;
     }
+}
+
+function __onConnectedToMain(this: WebPhoneSIPTransport): void {
+    this.__clearSwitchBackTimer();
 }
 
 function __onConnectedToBackup(this: WebPhoneSIPTransport): void {
