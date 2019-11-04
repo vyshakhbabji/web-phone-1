@@ -1,4 +1,3 @@
-import getStats from 'getstats';
 import {WebPhoneSession} from './session';
 
 const formatFloat = (input: any): string => parseFloat(input.toString()).toFixed(2);
@@ -14,48 +13,39 @@ export const startQosStatsCollection = (session: WebPhoneSession): void => {
     qosStatsObj.origID = session.request.headers.From[0].raw || session.request.headers.From[0];
 
     let previousGetStatsResult;
+    let qosCollection;
 
-    if (!getStats) throw new Error('getStats module was not provided!');
-
-    getStats(
-        session.sessionDescriptionHandler.peerConnection,
-        function(getStatsResult) {
-            previousGetStatsResult = getStatsResult;
+    qosCollection = setInterval(function() {
+        session.sessionDescriptionHandler.peerConnection.getStats().then(function(report) {
+            previousGetStatsResult = report;
             qosStatsObj.status = true;
-            var network = getNetworkType(previousGetStatsResult.connectionType);
-            qosStatsObj.localAddr = previousGetStatsResult.connectionType.local.ipAddress[0];
-            qosStatsObj.remoteAddr = previousGetStatsResult.connectionType.remote.ipAddress[0];
-            previousGetStatsResult.results.forEach(function(item) {
-                if (item.type === 'localcandidate') {
-                    qosStatsObj.localcandidate = item;
+            qosStatsObj.totalIntervalCount += 1;
+            previousGetStatsResult.forEach(stat => {
+                if (stat.type === 'inbound-rtp') {
+                    qosStatsObj.packetLost = stat.packetsLost;
+                    qosStatsObj.packetsReceived = stat.packetsReceived;
+                    qosStatsObj.totalSumJitter += parseFloat(stat.jitter);
+                    qosStatsObj.JBM = Math.max(qosStatsObj.JBM, parseFloat(stat.jitter));
+                    console.error('Packets Lost = ' + stat.packetsLost);
+                    console.error('Packets Recieved = ' + stat.packetsReceived);
+                    console.error('Jitter  = ' + stat.jitter);
                 }
-                if (item.type === 'remotecandidate') {
-                    qosStatsObj.remotecandidate = item;
-                }
-                if (item.type === 'ssrc' && item.transportId === 'Channel-audio-1' && item.id.includes('send')) {
-                    if (item.audioInputLevel === 0)
-                        session.logger.warn(
-                            'AudioInputLevel is 0. This might cause one-way audio. Check Microphone Volume settings.'
-                        );
-                    session.emit('no-input-volume');
-                }
-                if (item.type === 'ssrc' && item.transportId === 'Channel-audio-1' && item.id.includes('recv')) {
-                    qosStatsObj.jitterBufferDiscardRate = item.googSecondaryDiscardedRate || 0;
-                    qosStatsObj.packetLost = item.packetsLost;
-                    qosStatsObj.packetsReceived = item.packetsReceived;
-                    qosStatsObj.totalSumJitter += parseFloat(item.googJitterBufferMs);
-                    qosStatsObj.totalIntervalCount += 1;
-                    qosStatsObj.JBM = Math.max(qosStatsObj.JBM, parseFloat(item.googJitterBufferMs));
+                if (stat.type === 'local-candidate' && stat.candidateType === 'srflx') {
+                    var network = getNetworkType(stat.networkType);
                     qosStatsObj.netType = addToMap(qosStatsObj.netType, network);
+                    console.error('LOCAL CANDIDATE STAT');
+                    console.error(stat);
+                    console.error(network);
                 }
             });
-        },
-        session.ua.qosCollectInterval
-    );
+        });
+        console.error('Counter ' + qosStatsObj.totalIntervalCount);
+    }, session.ua.qosCollectInterval);
 
     session.on('terminated', function() {
-        previousGetStatsResult && previousGetStatsResult.nomore();
+        clearInterval(qosCollection);
         publishQosStats(session, qosStatsObj);
+        console.error(qosStatsObj);
     });
 };
 
@@ -189,8 +179,8 @@ enum networkTypeMap {
     cellular = 'Cellulars',
     ethernet = 'Ethernet',
     wifi = 'WiFi',
-    vpn = 'VPN',
     wimax = 'WiMax',
+    vpn = 'VPN',
     '2g' = '2G',
     '3g' = '3G',
     '4g' = '4G'
@@ -198,9 +188,7 @@ enum networkTypeMap {
 
 //TODO: find relaible way to find network type , use navigator.connection.type?
 const getNetworkType = (connectionType): networkTypeMap => {
-    const sysNetwork = connectionType.systemNetworkType || 'unknown';
-    const localNetwork = connectionType.local.networkType || ['unknown'];
-    const networkType = !sysNetwork || sysNetwork === 'unknown' ? localNetwork[0] : sysNetwork;
+    const networkType = connectionType || 'unknown';
     return networkType in networkTypeMap ? networkTypeMap[networkType] : networkType;
 };
 
